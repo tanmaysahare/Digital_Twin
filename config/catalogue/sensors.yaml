@@ -1,0 +1,133 @@
+# The low-cost sensing catalogue. TECHNICAL_SPEC.md Section 10, SNS-03.
+#
+# What the twin is allowed to recommend when a blind spot is limiting a
+# prediction. Six options, all of them chosen because they can be fitted in a
+# normal maintenance window without touching a PLC program.
+#
+# On the costs. Every figure below is our own assumption, and the source field
+# on each entry says so in those words rather than dressing it as a quotation.
+# We have no plant quotations and no vendor pricing, and RESEARCH_SOURCES.md
+# permits a number only where it traces to a source that was read, to a value
+# our own harness measured, or to an assumption labelled as one. These are the
+# third kind. A pilot replaces them with the site's own numbers, and until then
+# every Sensor Value Card shows the cost as indicative.
+
+version: "1"
+currency: USD
+note: >-
+  Indicative costs, all of them our assumptions rather than quotations. Replace
+  with site figures before any card reaches a capital request.
+
+options:
+  - option_id: clamp_current
+    name: Clamp-on current transducer
+    signal_provided: Motor current on the main drive, which gives cycle start and end
+    indicative_cost_usd: 40
+    install_hours: 0.5
+    requires_window: true
+    applicable_to: [B, C]
+    applies_to_manual: false
+    applies_to_automated: true
+    confidence_model:
+      projected_confidence: 0.85
+      projected_confidence_margin: 0.08
+      resolves: >-
+        Cycle start and end at this station, turning a bound from flanking
+        arrivals into a measured cycle time
+    source: >-
+      Assumption. A split-core current transducer plus half an hour of
+      electrician time in a scheduled window. Not quoted, not measured. Topic
+      support: S-105 to S-108.
+
+  - option_id: cycle_photo_eye
+    name: Cycle photo-eye
+    signal_provided: Unit present and unit clear, at the station boundary
+    indicative_cost_usd: 65
+    install_hours: 1.0
+    requires_window: true
+    applicable_to: [B, C]
+    confidence_model:
+      projected_confidence: 0.80
+      projected_confidence_margin: 0.10
+      resolves: >-
+        Arrival and departure at this station, which separates work time from
+        transport time in the flanking bound
+    source: >-
+      Assumption. A through-beam photo-eye, bracket and an hour to mount and
+      align it. Not quoted, not measured. Topic support: S-105 to S-108.
+
+  - option_id: scan_point
+    name: Barcode or RFID scan point
+    signal_provided: Unit identity and arrival time
+    indicative_cost_usd: 320
+    install_hours: 2.0
+    requires_window: true
+    applicable_to: [B, C]
+    confidence_model:
+      projected_confidence: 0.75
+      projected_confidence_margin: 0.10
+      resolves: >-
+        Which unit is where inside a run of dark stations, which is what turns a
+        bound on the sum of several cycle times into a bound on each of them
+    source: >-
+      Assumption. A fixed reader, a mount and two hours to place and network it.
+      Not quoted, not measured. Topic support: S-105 to S-108.
+
+  - option_id: accelerometer
+    name: Accelerometer
+    signal_provided: Vibration RMS on the drive or fixture
+    indicative_cost_usd: 180
+    install_hours: 1.5
+    requires_window: true
+    applicable_to: [B, C]
+    applies_to_manual: false
+    applies_to_automated: true
+    confidence_model:
+      projected_confidence: 0.70
+      projected_confidence_margin: 0.12
+      resolves: >-
+        Whether a slow cycle is a worn fixture or a slow operation, which the
+        cycle time alone cannot separate
+    source: >-
+      Assumption. An industrial IEPE accelerometer with a magnetic mount and an
+      hour and a half to fit and route. Not quoted, not measured. Topic support:
+      S-105 to S-108.
+
+  - option_id: ambient_logger
+    name: Ambient temperature and humidity logger
+    signal_provided: Zone temperature and humidity
+    indicative_cost_usd: 90
+    install_hours: 0.5
+    requires_window: false
+    applicable_to: [A, B, C]
+    confidence_model:
+      projected_confidence: 0.65
+      projected_confidence_margin: 0.15
+      resolves: >-
+        Whether a rise in defect rate follows the zone environment, which
+        currently has to be inferred from a single reading elsewhere in the zone
+    source: >-
+      Assumption. A networked logger that mounts on a wall and needs no
+      production stoppage. Not quoted, not measured. Topic support: S-105 to
+      S-108.
+
+  - option_id: tablet_check_capture
+    name: Tablet check capture
+    signal_provided: Timestamped completion of the manual checklist
+    indicative_cost_usd: 450
+    install_hours: 3.0
+    requires_window: false
+    applicable_to: [C]
+    applies_to_manual: true
+    applies_to_automated: false
+    confidence_model:
+      projected_confidence: 0.60
+      projected_confidence_margin: 0.15
+      resolves: >-
+        When the work at a manual dark station actually finished, to the minute
+        rather than to the shift
+    source: >-
+      Assumption. A rugged tablet, a mount and the time to configure the
+      checklist. The recurring cost of an operator tapping a screen is not in
+      this figure and is the reason this option ranks last on most stations.
+      Not quoted, not measured. Topic support: S-105 to S-108.
