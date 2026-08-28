@@ -1,0 +1,153 @@
+# Line 2, the reference line. PRD.md Section 1.
+#
+# Fictional but dimensioned from the problem statement. Six of the 42 stations
+# emit no machine data at all, which is 14 percent, and handling that is the
+# reason this product exists.
+#
+# Nothing here appears in code. Onboarding a different line is a second file of
+# this shape, which is what config/lines/line7.yaml demonstrates.
+
+line_id: line2
+name: Line 2
+takt_s: 60
+
+shifts:
+  - {id: A, start: "06:00", end: "14:30", break_min: 30, changeover_min: 20}
+  - {id: B, start: "14:30", end: "23:00", break_min: 30, changeover_min: 20}
+
+variants: [V-STD, V-SPT, V-LWB]
+mix: {V-STD: 0.55, V-SPT: 0.30, V-LWB: 0.15}
+
+zones:
+  - {id: body,  name: Body construction, stations: [S01, S16]}
+  - {id: paint, name: Paint,             stations: [S17, S26]}
+  - {id: final, name: Final assembly,    stations: [S27, S42]}
+
+# tier A: cycle events plus process values. 24 stations.
+# tier B: cycle start and stop timestamps only. 12 stations.
+# tier C: no machine data at all. 6 stations, and the case the twin exists for.
+stations:
+  - {id: S01, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S02, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S03, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S04, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S05, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S06, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S07, tier: B, transport_to_next_s: 4.0, is_manual: true}
+  - {id: S08, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S09, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S10, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S11, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S12, tier: A, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S13, tier: B, transport_to_next_s: 4.0, is_manual: true}
+  - {id: S14, tier: B, transport_to_next_s: 4.0, is_manual: true}
+  - {id: S15, tier: B, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S16, tier: B, transport_to_next_s: 4.0, is_manual: false}
+  - {id: S17, tier: A, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S18, tier: A, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S19, tier: A, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S20, tier: A, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S21, tier: A, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S22, tier: A, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S23, tier: B, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S24, tier: B, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S25, tier: B, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S26, tier: B, transport_to_next_s: 5.5, is_manual: false}
+  - {id: S27, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S28, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S29, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S30, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S31, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S32, tier: B, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S33, tier: C, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S34, tier: C, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S35, tier: C, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S36, tier: C, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S37, tier: C, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S38, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S39, tier: A, transport_to_next_s: 4.2, is_manual: false}
+  - {id: S40, tier: B, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S41, tier: B, transport_to_next_s: 4.2, is_manual: true}
+  - {id: S42, tier: C, is_manual: true}
+
+buffers:
+  - {id: B1, after: S04, capacity: 5}
+  - {id: B2, after: S08, capacity: 4}
+  - {id: B3, after: S12, capacity: 6}
+  - {id: B4, after: S16, capacity: 8}
+  - {id: B5, after: S19, capacity: 12}
+  - {id: B6, after: S22, capacity: 6}
+  - {id: B7, after: S26, capacity: 10}
+  - {id: B8, after: S31, capacity: 5}
+  # Small, and immediately after the dark span. Its behaviour is most of what
+  # the twin has to work with when it bounds S33 to S37.
+  - {id: B9, after: S37, capacity: 3}
+
+gates:
+  - {id: G1, after: S16, name: Body-in-white, catches: [weld, geometry]}
+  - {id: G2, after: S26, name: Paint inspection, catches: [finish, contamination]}
+  - {id: G3, after: S42, name: Final QC, catches: [torque, fit, electrical, finish]}
+
+rework:
+  - {from: G1, to: S12}
+  # Off the line, to the repair yard. The twin stops tracking the unit here and
+  # says so rather than modelling a yard it cannot see.
+  - {from: G3, to: off_line}
+
+ingest:
+  reorder_window_s: 30.0
+  skew_warn_s: 2.0
+  source_gap_takts: 3
+
+state:
+  window_cycles: 200
+  min_cycles: 20
+
+forecast:
+  horizon_min: 120
+  cadence_s: 120
+  replications: 200
+  stall_threshold_s: 180.0
+  stall_probability_threshold: 0.55
+  budget_s: 20.0
+  attribution_window_min: 60
+
+drift:
+  ewma_lambda: 0.2
+  ewma_L: 3.0
+  cusum_k_sigma: 0.5
+  cusum_h_sigma: 5.0
+  require_both: true
+
+gates_policy:
+  promotion: {min_predictions: 20, min_precision: 0.70, min_recall: 0.50}
+  demotion:  {min_predictions: 10, max_precision: 0.55}
+  window_days: 14
+  cooling_period_days: 7
+
+counterfactual:
+  operator_add_cycle_scale: 0.88
+  operator_add_variance_scale: 0.75
+  station_overrides:
+    # A second operator helps most where the work is manual and the station is
+    # not paced by a machine. These are starting positions and are revised from
+    # observed effect once a floater has actually been added.
+    S33: 0.84
+    S34: 0.84
+    S35: 0.86
+    S36: 0.86
+    S37: 0.84
+    S42: 0.90
+  latency_budget_s: 5.0
+
+sensors:
+  observability_threshold: 0.60
+  criticality_threshold: 0.20
+  weight_measured_share: 0.4
+  weight_interval_width: 0.4
+  weight_signal_coverage: 0.2
+  target_confidence: 0.85
+  # Contribution margin per unit. Zero until a plant supplies its own figure,
+  # so the modelled value of a sensor reads as zero rather than as an invented
+  # number.
+  unit_value_usd: 0.0

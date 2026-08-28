@@ -1,0 +1,82 @@
+# SourceMapping for the built-in line simulator. ONB-02.
+#
+# On a real site this file names OPC UA node identifiers, MQTT topics or
+# historian tag paths. Against the simulator the native references are its own
+# channels, and the file has the same shape so that swapping the source is a
+# file change rather than a code change.
+#
+# Nothing here writes. A mapping says where an event comes from and has no way
+# to express a destination.
+
+line_id: line2
+adapter: sim
+description: The built-in SimPy line model, filtered by observability tier
+
+mappings:
+  # Tier A and tier B both emit cycle events. This is the only signal a tier B
+  # station produces, and it is enough to bound its neighbours.
+  - native_ref: sim.station.cycle.start
+    event_type: CYCLE_START
+    note: Every station at tier A or B
+
+  - native_ref: sim.station.cycle.end
+    event_type: CYCLE_END
+    note: Every station at tier A or B
+
+  - native_ref: sim.station.state
+    event_type: STATION_STATE
+    note: Running, blocked, starved, down, changeover
+
+  - native_ref: sim.unit.arrive
+    event_type: UNIT_ARRIVE
+    note: Emitted at the arriving station when it is instrumented
+
+  - native_ref: sim.unit.depart
+    event_type: UNIT_DEPART
+
+  # Tier A only. The process values that make a defect model possible.
+  - native_ref: sim.process.torque
+    event_type: PROCESS_VALUE
+    transform: {signal: torque, unit: N_m, decimals: 2}
+
+  - native_ref: sim.process.torque_angle
+    event_type: PROCESS_VALUE
+    transform: {signal: torque_angle, unit: degree, decimals: 1}
+
+  - native_ref: sim.process.motor_current
+    event_type: PROCESS_VALUE
+    transform: {signal: motor_current, unit: A, decimals: 2}
+
+  - native_ref: sim.process.vibration_rms
+    event_type: PROCESS_VALUE
+    transform: {signal: vibration_rms, unit: mm_s, decimals: 3}
+
+  - native_ref: sim.process.dimensional
+    event_type: PROCESS_VALUE
+    transform: {signal: dimensional_deviation, unit: mm, decimals: 2}
+
+  # Zone level, not station level, which is why station_id is null.
+  - native_ref: sim.zone.environment
+    event_type: ENV_READING
+    station_id: null
+    transform: {signals: [temperature_c, humidity_pct]}
+
+  - native_ref: sim.material.lot_scan
+    event_type: PART_LOT_SCAN
+
+  - native_ref: sim.gate.result
+    event_type: INSPECTION_RESULT
+    note: G1, G2 and G3
+
+  # The three signals a dark station can still produce. None of them is machine
+  # data, and none of them gives a cycle time. That is the whole problem.
+  - native_ref: sim.station.andon
+    event_type: ANDON
+
+  - native_ref: sim.station.manual_check
+    event_type: MANUAL_CHECK
+    note: A checklist result, recorded by an operator, with no timestamp precision
+
+  - native_ref: sim.line.shift
+    event_type: SHIFT_MARKER
+    station_id: null
