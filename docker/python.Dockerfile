@@ -9,8 +9,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# libgomp is the only system library needed at runtime: LightGBM links against
+# it. There is no compiler here, because every dependency in pyproject.toml
+# ships a manylinux wheel for CPython 3.11 and a toolchain would add several
+# hundred megabytes to a cold start that has a five minute budget (NFR-05).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential libgomp1 \
+ && apt-get install -y --no-install-recommends libgomp1 \
  && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md LICENSE ./

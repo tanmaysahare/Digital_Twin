@@ -1,0 +1,25 @@
+# Keep the build context small. Without this the Python image copies the local
+# virtualenv and web/node_modules into the layer, which cost about three
+# minutes of the five minute cold start budget (NFR-05).
+
+.git/
+.github/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+node_modules/
+web/node_modules/
+web/.next/
+web/out/
+
+.env
+docs/
+evaluation/figures/
+pgdata/

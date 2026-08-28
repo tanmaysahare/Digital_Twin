@@ -64,9 +64,9 @@ TASKS: dict[str, Task] = {
         "Design rules, ruff, mypy strict, eslint, stylelint",
         [
             _python("-m", "tools.designlint"),
-            Step(["ruff", "check", "."]),
-            Step(["ruff", "format", "--check", "."]),
-            Step(["mypy"]),
+            _python("-m", "ruff", "check", "."),
+            _python("-m", "ruff", "format", "--check", "."),
+            _python("-m", "mypy"),
             _npm("run", "lint"),
             _npm("run", "lint:css"),
         ],
@@ -78,8 +78,8 @@ TASKS: dict[str, Task] = {
     "format": Task(
         "Rewrite Python and web sources in the project style",
         [
-            Step(["ruff", "format", "."]),
-            Step(["ruff", "check", "--fix", "."]),
+            _python("-m", "ruff", "format", "."),
+            _python("-m", "ruff", "check", "--fix", "."),
             _npm("run", "format"),
         ],
     ),
@@ -105,7 +105,7 @@ TASKS: dict[str, Task] = {
     ),
     "migrate": Task(
         "Apply database migrations to the configured database",
-        [Step(["alembic", "upgrade", "head"])],
+        [_python("-m", "alembic", "upgrade", "head")],
     ),
     "seed": Task(
         "Rebuild the seeded demo database",
@@ -151,7 +151,10 @@ def run(name: str) -> int:
             print(f"Skipping '{' '.join(step.argv)}': {missing} not found.")
             continue
         print(f"$ {' '.join(step.argv)}")
-        result = subprocess.run(step.argv, cwd=step.cwd, check=False)
+        # Windows needs the resolved path: npm is npm.cmd, and CreateProcess
+        # does not consult PATHEXT the way a shell does.
+        resolved = shutil.which(step.argv[0]) or step.argv[0]
+        result = subprocess.run([resolved, *step.argv[1:]], cwd=step.cwd, check=False)
         if result.returncode != 0:
             return result.returncode
     return 0
