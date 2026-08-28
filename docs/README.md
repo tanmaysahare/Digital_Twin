@@ -56,6 +56,7 @@ If you are new to the project, four documents give you the whole picture:
 | [technical/API_SPEC.md](technical/API_SPEC.md) | Endpoints, the `Estimate` shape, and what the API deliberately does not offer |
 | [technical/SECURITY_REQUIREMENTS.md](technical/SECURITY_REQUIREMENTS.md) | Written for a controls engineer. Hand this one to plant IT first |
 | [technical/INTEGRATIONS.md](technical/INTEGRATIONS.md) | Adapter by adapter, with firewall rules and the gotchas that decide deployments |
+| [technical/RUNNING.md](technical/RUNNING.md) | How to run the stack, with Docker and without it |
 
 ## Building it with Claude Code
 
