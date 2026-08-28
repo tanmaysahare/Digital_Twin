@@ -81,6 +81,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "ANN", "PLR2004", "T20"]
 "tools/*" = ["T20"]
+# Migration bodies are generated from twin/db/schema.py. Reflowing the generated
+# table definitions to satisfy the line length would make every future
+# regeneration a diff, and upgrade and downgrade say what they do in the module
+# docstring rather than twice over.
+"migrations/versions/*" = ["D103", "E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -18,11 +18,15 @@
   variant                   station_distribution       sensor_recommendation
   source_mapping                                       counterfactual_run
   sensor_catalogue
-                            events
-                            ------
+                            events                     missed_event
+                            ------                     evaluation_run
                             event  (hypertable)
                             source_health
                             data_gap
+
+  schema truth              (no grant to the application role)
+  ------------
+  scenario_injection
 ```
 
 Everything plant-specific is in `config` and is loaded from YAML, so the same schema
@@ -59,14 +63,18 @@ configuration in force when it was made.
 Index: `(line_id, seq)`.
 
 ### `buffer`
-`buffer_id` PK, `line_id`, `after_station_id`, `capacity int`.
+`(line_id, buffer_id)` PK, `after_station_id`, `capacity int`.
 
 ### `gate`
-`gate_id` PK, `line_id`, `after_station_id`, `name`, `catches jsonb` (which defect
+`(line_id, gate_id)` PK, `after_station_id`, `name`, `catches jsonb` (which defect
 classes this gate detects, used to decide which model scores against it).
 
 ### `variant`
-`variant_id` PK, `line_id`, `name`, `nominal_mix_share numeric`.
+`(line_id, variant_id)` PK, `name`, `nominal_mix_share numeric`.
+
+Every configuration key is composite with `line_id`. Two lines onboarded from
+files may both call a station S20 or a buffer B5, and ONB-04 requires that they
+can (AC-080).
 
 ### `source_mapping`
 | Column | Type | Notes |
@@ -116,7 +124,7 @@ Primary key is `(ts_source, event_id)`. Retention in the prototype is 30 simulat
 via a Timescale retention policy.
 
 ### `source_health`
-`source_adapter`, `line_id`, `last_event_at`, `events_last_min int`,
+`(line_id, source_adapter)` PK, `last_event_at`, `events_last_min int`,
 `estimated_skew_s numeric`, `state text` (`LIVE`, `DEGRADED`, `SILENT`), `checked_at`.
 
 ### `data_gap`
@@ -170,7 +178,8 @@ question is answered from.
 |---|---|---|
 | `visit_id` | uuid PK | |
 | `unit_id` | text FK | |
-| `station_id` | text FK | |
+| `line_id` | text | Part of the composite key into `station` |
+| `station_id` | text FK | With `line_id` |
 | `seq` | int | Visit order, so a rework revisit is distinguishable |
 | `arrived_at`, `departed_at` | timestamptz | |
 | `dwell_s` | numeric | |
@@ -193,7 +202,7 @@ suspect station and window, find every unit that passed through it.
 ### `station_distribution`
 The rolling baseline per station per variant.
 
-`station_id`, `variant_id`, `window_end timestamptz`, `n int`, `median numeric`,
+`(line_id, station_id, variant_id, window_end)` PK, `n int`, `median numeric`,
 `mad numeric`, `p05`, `p95 numeric`, `empirical jsonb` (the resampling pool used by the
 DES), `fit_residual numeric`.
 
@@ -280,6 +289,12 @@ Recall is computed by joining `missed_event`, not from this view alone. A view t
 only see predictions cannot compute recall, and a product that quietly reports precision
 as if it were accuracy is exactly the product this one is arguing against.
 
+The view carries a unique index on `(predictor, line_id, station_id)` with
+`NULLS NOT DISTINCT`, so that the per-cycle refresh can run concurrently rather
+than locking the scorecard while a supervisor is reading it. `station_id` is
+null for a line-level predictor, and two null station identifiers are the same
+row here.
+
 ### `counterfactual_run`
 `run_id` PK, `line_id`, `made_at`, `seed_state_ts`, `intervention jsonb`,
 `baseline_result jsonb`, `intervention_result jsonb`, `replications int`,
@@ -315,7 +330,22 @@ product's own sensor economics.
 
 ---
 
-## 7. Evaluation
+## 7. Ground truth and evaluation
+
+### `scenario_injection` (schema `truth`)
+
+What the simulator injected, when, where and with what parameters. This is the
+ground truth the evaluation harness joins against, and it is the reason the
+truth schema exists.
+
+`injection_id` PK, `run_id`, `scenario_id`, `line_id`, `station_id` (nullable
+for a line-level scenario), `injected_at`, `ends_at` (nullable), `mechanism`,
+`parameters jsonb`.
+
+Further truth tables arrive with the simulator at T-024. Every one of them lives
+in this schema.
+
+---
 
 ### `evaluation_run`
 `run_id` PK, `scenario_id`, `seed`, `started_at`, `finished_at`, `config_version`,
@@ -327,6 +357,11 @@ exactly (NFR-07).
 ---
 
 ## 8. Integrity rules
+
+The roles are `digitaltwin_app`, which the api and worker connect as, and
+`digitaltwin_truth`, which owns the truth schema and which the simulator
+connects as. Both are created by migration 0002 if absent. Passwords are set out
+of band and are never committed.
 
 | Rule | Enforcement |
 |---|---|

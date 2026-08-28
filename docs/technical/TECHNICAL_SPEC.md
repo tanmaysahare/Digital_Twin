@@ -37,8 +37,16 @@ Kubernetes.
 Digital_Twin/
   CLAUDE.md
   README.md
-  Makefile
+  Makefile                   thin, delegates to tools/tasks.py
+  make.cmd                   the same tasks on Windows without make
   docker-compose.yml
+  docker/                    the two Dockerfiles
+  alembic.ini
+  migrations/                Alembic environment and versions
+  .lint/                     banned word lists for the design rules
+  tools/
+    tasks.py                 the task runner behind the Makefile
+    designlint/              the design rules from TEST_PLAN.md Section 7
   docs/                      (this specification set)
   config/
     lines/line2.yaml         LineDefinition for the reference line
@@ -56,6 +64,11 @@ Digital_Twin/
     csv_replay_adapter.py
     normalise.py             reordering window, clock skew, health
   twin/
+    db/
+      schema.py              SQLAlchemy metadata, the declarative half of
+                             DATABASE_SCHEMA.md
+      engine.py              settings and the engine
+      migration.py           running and comparing migrations
     domain/                  dataclasses: Estimate, LineState, ProcessSignature
     state/estimator.py
     state/virtual_sensors.py
