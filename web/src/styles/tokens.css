@@ -1,0 +1,113 @@
+/* Design tokens. The only file in the repository permitted to hold a raw colour
+ * value; stylelint fails a hex or rgb literal anywhere else.
+ *
+ * Source: docs/design/DESIGN_SYSTEM.md. Governed by
+ * docs/human-design/HUMAN_DESIGN_GUIDELINES.md, which has veto power over it.
+ *
+ * The rule that generates this palette: greyscale by default, colour means
+ * abnormal. A normally running line renders in paper, ink and grey. There is no
+ * green for good, because painting 38 normal stations green makes the four
+ * abnormal ones harder to find.
+ *
+ * There is no prefers-color-scheme block and there never will be. A stylelint
+ * rule prevents one being added.
+ */
+
+:root {
+  /* base */
+  --paper: #FAF9F7;
+  --paper-sunk: #F3F1ED;
+  --paper-raised: #FFFFFF;
+  --ink: #1A1A1A;
+  --ink-2: #4A4A48;
+  --ink-3: #7A7975;
+  --ink-4: #A8A6A1;
+  --rule: #D9D6D0;
+  --rule-strong: #B5B2AB;
+
+  /* state, the only saturated colour in the product */
+  --state-drift: #B8860B;
+  --state-blocked: #C2701C;
+  --state-starved: #C2701C;
+  --state-down: #A32020;
+  --state-forecast: #B8860B;
+  --state-defect: #A32020;
+  --state-dark: #8C8A85;
+
+  /* accent: interactive text and the focus ring, nowhere else */
+  --accent: #1B3A5C;
+  --accent-quiet: #E8EDF2;
+
+  /* charts */
+  --series-1: #3A3A38;
+  --series-2: #6E6C67;
+  --series-3: #9C9A94;
+  --band: #E3E0DA;
+  --baseline: #B5B2AB;
+
+  /* type */
+  --font-sans: "Inter", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* type scale. The largest thing on a screen is barely larger than the
+   * smallest: hierarchy comes from weight, spacing and rules, not from scale. */
+  --text-display: 28px;
+  --text-display-line: 32px;
+  --text-display-weight: 600;
+  --text-title: 20px;
+  --text-title-line: 28px;
+  --text-title-weight: 600;
+  --text-section: 15px;
+  --text-section-line: 22px;
+  --text-section-weight: 600;
+  --text-body: 14px;
+  --text-body-line: 21px;
+  --text-body-weight: 400;
+  --text-label: 13px;
+  --text-label-line: 18px;
+  --text-label-weight: 500;
+  --text-small: 12px;
+  --text-small-line: 16px;
+  --text-small-weight: 400;
+  --text-micro: 11px;
+  --text-micro-line: 14px;
+  --text-micro-weight: 500;
+  --measure-max: 68ch;
+
+  /* space. Space between groups is always at least twice the space within a
+   * group, which is what lets the layout work with very few borders. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* line */
+  --rule-width: 1px;
+  --radius: 2px;
+  --radius-none: 0;
+  --border: 1px solid var(--rule);
+  --border-strong: 1px solid var(--rule-strong);
+  --border-state-width: 2px;
+
+  /* elevation. Only the station drawer and the sandbox overlay cast a shadow. */
+  --elevation-overlay: 0 2px 8px rgb(26 26 26 / 10%);
+
+  /* motion. Only where it shows that a value changed. */
+  --motion-value: 120ms;
+  --motion-panel: 160ms;
+  --motion-ease: ease-out;
+
+  /* focus */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-value: 0ms;
+    --motion-panel: 0ms;
+  }
+}
