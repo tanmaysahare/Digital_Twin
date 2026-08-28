@@ -64,6 +64,11 @@ Digital_Twin/
     csv_replay_adapter.py
     normalise.py             reordering window, clock skew, health
   twin/
+    config/
+      line.py                LineDefinition and its policies
+      sources.py             SourceMapping
+      catalogue.py           the sensing catalogue
+      loader.py              YAML loading, with errors that name the field
     db/
       schema.py              SQLAlchemy metadata, the declarative half of
                              DATABASE_SCHEMA.md
