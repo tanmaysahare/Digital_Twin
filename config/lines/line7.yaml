@@ -1,0 +1,117 @@
+# Line 7, a structurally different second line. ONB-04, AC-080.
+#
+# This file exists to prove that onboarding a line is configuration rather than
+# code. It differs from Line 2 on every axis that a naive implementation would
+# have hard-coded: 18 stations instead of 42, a W prefix instead of S, two zones
+# instead of three, a 92 second takt, two variants instead of three, no rework
+# loop back into the line, four buffers, and a tier distribution weighted the
+# other way with a third of the line dark.
+#
+# It is a commercial vehicle chassis line, so the takt is slower and the buffers
+# are smaller.
+
+line_id: line7
+name: Line 7 chassis
+takt_s: 92
+
+shifts:
+  - {id: D, start: "07:00", end: "15:30", break_min: 45, changeover_min: 15}
+
+variants: [C-BASE, C-XL]
+mix: {C-BASE: 0.7, C-XL: 0.3}
+
+zones:
+  - {id: frame, name: Frame and axle, stations: [W01, W09]}
+  - {id: trim,  name: Cab trim,       stations: [W10, W18]}
+
+# Six of the eighteen stations are dark, a third of the line, and four of them
+# are consecutive. Line 2 has a comparable span at S33 to S37; here it starts at
+# W11 and the flanking evidence is weaker because the buffers either side are
+# smaller. The twin has to say so rather than produce a narrower bound.
+stations:
+  - {id: W01, tier: B, transport_to_next_s: 7.0, is_manual: false}
+  - {id: W02, tier: A, transport_to_next_s: 7.0, is_manual: false}
+  - {id: W03, tier: B, transport_to_next_s: 7.0, is_manual: false}
+  - {id: W04, tier: B, transport_to_next_s: 7.0, is_manual: true}
+  - {id: W05, tier: C, transport_to_next_s: 7.0, is_manual: true}
+  - {id: W06, tier: B, transport_to_next_s: 7.0, is_manual: false}
+  - {id: W07, tier: A, transport_to_next_s: 7.0, is_manual: false}
+  - {id: W08, tier: B, transport_to_next_s: 7.0, is_manual: false}
+  - {id: W09, tier: B, transport_to_next_s: 9.5, is_manual: true}
+  - {id: W10, tier: B, transport_to_next_s: 6.0, is_manual: true}
+  - {id: W11, tier: C, transport_to_next_s: 6.0, is_manual: true}
+  - {id: W12, tier: C, transport_to_next_s: 6.0, is_manual: true}
+  - {id: W13, tier: C, transport_to_next_s: 6.0, is_manual: true}
+  - {id: W14, tier: C, transport_to_next_s: 6.0, is_manual: true}
+  - {id: W15, tier: B, transport_to_next_s: 6.0, is_manual: false}
+  - {id: W16, tier: A, transport_to_next_s: 6.0, is_manual: false}
+  - {id: W17, tier: C, transport_to_next_s: 6.0, is_manual: true}
+  - {id: W18, tier: B, is_manual: false}
+
+buffers:
+  - {id: K1, after: W03, capacity: 2}
+  - {id: K2, after: W09, capacity: 4}
+  - {id: K3, after: W14, capacity: 2}
+  - {id: K4, after: W16, capacity: 3}
+
+gates:
+  - {id: Q1, after: W09, name: Frame check, catches: [alignment, torque]}
+  - {id: Q2, after: W18, name: Cab sign-off, catches: [torque, fit, electrical]}
+
+# No loop back into the line. A failed chassis leaves for rectification, which
+# is a genuinely different topology from Line 2 and is the point of this file.
+rework:
+  - {from: Q1, to: off_line}
+  - {from: Q2, to: off_line}
+
+ingest:
+  reorder_window_s: 45.0
+  skew_warn_s: 3.0
+  source_gap_takts: 2
+
+state:
+  window_cycles: 120
+  min_cycles: 20
+
+forecast:
+  horizon_min: 180
+  cadence_s: 180
+  replications: 150
+  stall_threshold_s: 240.0
+  stall_probability_threshold: 0.60
+  budget_s: 20.0
+  attribution_window_min: 90
+
+drift:
+  ewma_lambda: 0.25
+  ewma_L: 3.0
+  cusum_k_sigma: 0.5
+  cusum_h_sigma: 5.0
+  require_both: true
+
+# A slower line produces fewer scoreable predictions per day, so the evaluation
+# window is longer rather than the gate being lower.
+gates_policy:
+  promotion: {min_predictions: 20, min_precision: 0.70, min_recall: 0.50}
+  demotion:  {min_predictions: 10, max_precision: 0.55}
+  window_days: 28
+  cooling_period_days: 14
+
+counterfactual:
+  operator_add_cycle_scale: 0.85
+  operator_add_variance_scale: 0.70
+  station_overrides:
+    W11: 0.82
+    W12: 0.82
+    W13: 0.85
+    W14: 0.85
+  latency_budget_s: 5.0
+
+sensors:
+  observability_threshold: 0.55
+  criticality_threshold: 0.15
+  weight_measured_share: 0.5
+  weight_interval_width: 0.3
+  weight_signal_coverage: 0.2
+  target_confidence: 0.80
+  unit_value_usd: 0.0
