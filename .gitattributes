@@ -1,0 +1,21 @@
+# Normalise line endings so that a checkout on Windows, macOS and Linux produces
+# the same files (T-136). make and the shell entrypoints in the containers both
+# fail on carriage returns, so those are pinned to LF regardless of platform.
+
+* text=auto eol=lf
+
+Makefile      text eol=lf
+*.sh          text eol=lf
+*.py          text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+Dockerfile    text eol=lf
+*.Dockerfile  text eol=lf
+
+*.cmd         text eol=crlf
+*.bat         text eol=crlf
+
+*.png binary
+*.jpg binary
+*.woff binary
+*.woff2 binary
