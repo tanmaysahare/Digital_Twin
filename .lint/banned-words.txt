@@ -1,0 +1,33 @@
+# Marketing vocabulary banned outright by
+# docs/human-design/HUMAN_DESIGN_GUIDELINES.md rule 21.
+#
+# One term per line. Lines starting with # are comments. Matching is
+# case-insensitive and on whole words.
+#
+# Terms whose ban is context-scoped in the guideline itself, "robust (as a
+# compliment)" and "leverage (as a verb)" among them, are in banned-phrases.txt
+# instead, because banning them outright would fail on "robust location and
+# scale" and on "the evaluation harness", which are the technical senses this
+# repository uses throughout.
+
+magic
+magical
+revolutionary
+seamless
+seamlessly
+effortless
+effortlessly
+unlock
+unleash
+empower
+game-changing
+game changing
+cutting-edge
+cutting edge
+state-of-the-art
+next-generation
+powerful
+delve
+supercharge
+streamline
+at the speed of

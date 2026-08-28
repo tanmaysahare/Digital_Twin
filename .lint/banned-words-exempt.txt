@@ -1,0 +1,11 @@
+# Files exempt from the banned vocabulary rule, with the reason for each.
+#
+# An exemption here is not a suppression comment. It names a whole file whose
+# subject matter requires the words to appear verbatim, and every one of them is
+# a document rather than a place marketing copy could hide. Adding a file here
+# needs the same review as changing a rule.
+#
+# Format: path, then whitespace, then the reason.
+
+docs/human-design/HUMAN_DESIGN_GUIDELINES.md   Defines the banned list. Rule 21 states the terms in running prose, unquoted.
+RESEARCH_SOURCES.md                            A bibliography. Titles of cited works are reproduced verbatim and must not be edited.

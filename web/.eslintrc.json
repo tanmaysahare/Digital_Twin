@@ -1,0 +1,19 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-non-null-assertion": "error",
+    "@typescript-eslint/consistent-type-imports": "error",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXAttribute[name.name='style']",
+        "message": "Inline style is permitted only for a value computed at runtime, such as a bar width or a chart coordinate. Add a comment above the attribute and disable this rule for that line only after review."
+      }
+    ]
+  },
+  "ignorePatterns": ["node_modules/", ".next/", "next-env.d.ts"]
+}

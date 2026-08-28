@@ -1,0 +1,36 @@
+# Context-scoped bans. Each line is a Python regular expression, matched
+# case-insensitively. A match is a violation.
+#
+# These exist because docs/human-design/HUMAN_DESIGN_GUIDELINES.md rule 21 scopes
+# several of its terms by sense: "robust (as a compliment)", "leverage (as a
+# verb)". A whole-word ban on those terms would fail on the statistical and
+# mechanical senses this repository uses correctly and often.
+
+# "robust" as a compliment. The statistical sense (robust location, robust
+# scale, robust estimator, robust fitting) is correct usage and is allowed.
+\brobust\b(?!\s+(location|scale|statistic|estimat|regression|median|mean|fit|distribution|standard|baseline))
+
+# "leverage" as a verb. The financial noun is not used here at all.
+\bleverag(e|es|ed|ing)\b
+
+# "harness" as a verb. The noun, as in the evaluation harness, is correct usage.
+\bharness(es|ed|ing)?\s+(the\s+)?(power|potential|value|data|strength|capabilit)
+
+# "transform" applied to a business or an operation. The CSS property and the
+# tag transform column are correct usage.
+\btransform(s|ed|ing|ation)?\s+(your|our|the\s+way|manufacturing|business|operations|industry|plant)
+
+# "elevate" applied to anything but a physical height.
+\belevat(e|es|ed|ing)\s+(your|our|the\s+(experience|standard|game|bar))
+
+# "journey" as a metaphor for using a product.
+\b(customer|user|transformation|digital|adoption|onboarding)\s+journey\b
+
+# "in real time" as a boast rather than as a specification with a number.
+\bin\s+real\s+time\b(?![^.]*\b\d)
+
+# AI self-reference as a selling point, rule 22.
+\bAI-powered\b
+\bpowered\s+by\s+(machine\s+learning|AI|artificial\s+intelligence)\b
+\bour\s+AI\s+(thinks|knows|understands|decides)\b
+\bintelligent\s+(platform|system|assistant|dashboard|insight)
