@@ -38,25 +38,39 @@ Charts follow the same rule: series are distinguished by direct label and by lin
 
 ## 3. Contrast
 
-All values verified against WCAG 2.2 SC 1.4.3 (text) and 1.4.11 (non-text).
+All values computed against WCAG 2.2 SC 1.4.3 (text) and 1.4.11 (non-text) from the
+hex values in `web/src/styles/tokens.css`, and confirmed against the rendered
+application by `tools/a11y/axe_scan.mjs`.
+
+**These numbers were wrong until 2026-08-30 and the token moved to fix it.** The
+table claimed 4.7:1 for `--ink-3` on `--paper`. The rendered value was 4.14:1, which
+axe-core reported as a colour-contrast violation on all three views at every context.
+`--ink-3` was `#7A7975` and is now `#6F6E6A`, the lightest value that clears 4.5:1 on
+both `--paper` and `--paper-sunk`. Six other rows were also optimistic and are corrected
+here. The lesson is the one this repository keeps relearning: a contrast figure that was
+asserted rather than computed is not evidence.
 
 | Pairing | Ratio | Requirement | Result |
 |---|---|---|---|
-| `--ink` on `--paper` | 15.3:1 | 4.5:1 | Pass AAA |
+| `--ink` on `--paper` | 16.5:1 | 4.5:1 | Pass AAA |
 | `--ink-2` on `--paper` | 8.4:1 | 4.5:1 | Pass AAA |
-| `--ink-3` on `--paper` | 4.7:1 | 4.5:1 | Pass AA |
+| `--ink-3` on `--paper` | 4.9:1 | 4.5:1 | Pass AA |
 | `--ink-3` on `--paper-sunk` | 4.5:1 | 4.5:1 | Pass AA, at the boundary |
-| `--ink-4` on `--paper` | 2.7:1 | 3:1 non-text | Fails. Restricted to decorative axis ticks and disabled controls, never to information |
-| `--accent` on `--paper` | 10.1:1 | 4.5:1 | Pass AAA |
-| `#FFFFFF` on `--state-down` | 6.2:1 | 4.5:1 | Pass AA |
-| `--ink` on `--state-drift` | 5.9:1 | 4.5:1 | Pass AA |
-| `--ink` on `--state-blocked` | 5.1:1 | 4.5:1 | Pass AA |
-| `--rule` on `--paper` | 1.4:1 | 3:1 for meaningful boundaries | Decorative rules only. Meaningful boundaries use `--rule-strong` at 3.1:1 |
-| Focus ring `--accent` on `--paper` | 10.1:1 | 3:1 | Pass |
+| `--ink-4` on `--paper` | 2.3:1 | 3:1 non-text | Fails. Restricted to decorative axis ticks and disabled controls, never to information |
+| `--accent` on `--paper` | 11.1:1 | 4.5:1 | Pass AAA |
+| `#FFFFFF` on `--state-down` | 7.5:1 | 4.5:1 | Pass AA |
+| `--ink` on `--state-drift` | 5.4:1 | 4.5:1 | Pass AA |
+| `--ink` on `--state-blocked` | 4.7:1 | 4.5:1 | Pass AA |
+| `--rule` on `--paper` | 1.4:1 | 3:1 for meaningful boundaries | Decorative rules only |
+| `--rule-strong` on `--paper` | 2.0:1 | 3:1 for meaningful boundaries | Fails. A meaningful boundary carries a label or a state chip as well, never the rule alone |
+| Focus ring `--accent` on `--paper` | 11.1:1 | 3:1 | Pass |
 
 **Disabled state exception.** WCAG exempts disabled controls from contrast requirements. We still keep disabled text above 3:1 where practical, because a supervisor needs to read why a control is unavailable.
 
-Contrast is checked in CI over the token file and over rendered component snapshots. A new token pairing that fails is a build failure.
+Contrast is checked by `tools/a11y/axe_scan.mjs` against the running application, which
+is where a pairing actually resolves. It is not a CI job: the scan needs a live API and a
+browser, and a check that cannot run in CI should not be listed as though it does.
+`docs/quality/ACCESSIBILITY_RESULTS.md` carries the output of the last run.
 
 ---
 
@@ -171,18 +185,25 @@ Not a WCAG conformance area at AA, and central to this product.
 
 ## 10. Testing
 
+**How this table is to be read.** "Runs" says when a check actually runs, not when we
+would like it to. None of the browser checks is a CI job, because each needs a live API
+behind the application as well as a browser, and CI has neither. They run on demand
+against the running stack, which is the only place the answers are real.
+
 | Test | Tool | Runs |
 |---|---|---|
-| Automated rule check | axe-core via Playwright, all three views, all breakpoints | Every CI run |
-| Contrast over tokens | Custom script over `tokens.css` | Every CI run |
-| Contrast over rendered components | axe-core colour-contrast rule on component snapshots | Every CI run |
-| Tab order and focus visibility | Playwright script per view | Every CI run |
-| Keyboard trap | Playwright, open and Escape each overlay | Every CI run |
-| Greyscale distinguishability | Render with a greyscale filter, compare state region histograms | Every CI run |
-| Text size floor at wall breakpoint | DOM walk at 1920 width | Every CI run |
-| Target size and separation | DOM walk at 1280 width | Every CI run |
-| Screen reader pass | Manual, NVDA on Windows, VoiceOver on macOS | Before submission |
-| 3 m legibility | Manual, printed at scale or shown on a large display | Before submission |
+| Automated rule check | axe-core via Playwright, all three views, all three contexts | `tools/a11y/axe_scan.mjs`, on demand |
+| Contrast over rendered components | axe-core colour-contrast rule, same run | `tools/a11y/axe_scan.mjs`, on demand |
+| Focus visibility | Same run, first tab stop per view | `tools/a11y/axe_scan.mjs`, on demand |
+| Text size floor per context | DOM walk for the smallest rendered text | `tools/a11y/axe_scan.mjs`, on demand |
+| Keyboard trap | Manual, open and Escape each overlay | Before submission |
+| Greyscale distinguishability | Design rule lint plus visual review of the state patterns sheet | Every `make lint` |
+| Target size and separation | Manual, at the 1280 context | Before submission |
+| Screen reader pass | Manual, NVDA on Windows, VoiceOver on macOS | **Not done.** Needs a person |
+| 3 m legibility | Manual, on a 55-inch panel at 3 m | **Not done.** Needs a panel and a room |
+
+The last two are the only checks in this document that a machine cannot make, and they
+are the two that remain outstanding at the Round 2 cut.
 
 Automated tools catch roughly a third of accessibility problems. The manual passes are not optional.
 

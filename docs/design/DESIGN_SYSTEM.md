@@ -21,7 +21,7 @@ Greyscale by default. Colour means abnormal. There is no green for good, no bran
 | `--paper-raised` | `#FFFFFF` | Panels that sit above the page: drawer, sandbox overlay |
 | `--ink` | `#1A1A1A` | Primary text |
 | `--ink-2` | `#4A4A48` | Secondary text, labels |
-| `--ink-3` | `#7A7975` | Tertiary text, units, timestamps |
+| `--ink-3` | `#6F6E6A` | Tertiary text, units, timestamps |
 | `--ink-4` | `#A8A6A1` | Disabled, axis ticks |
 | `--rule` | `#D9D6D0` | Borders, dividers, table rules |
 | `--rule-strong` | `#B5B2AB` | Section separators, chart axes |
@@ -84,15 +84,29 @@ Two faces. No third. Fonts are self-hosted so the product runs offline.
 
 Restrained. The largest thing on a screen is barely larger than the smallest.
 
-| Token | Size / line height | Weight | Use |
-|---|---|---|---|
-| `--text-display` | 28px / 32px | 600 | The single largest number on Line view (lead time). Used once per screen at most |
-| `--text-title` | 20px / 28px | 600 | Page title |
-| `--text-section` | 15px / 22px | 600 | Section heading |
-| `--text-body` | 14px / 21px | 400 | Body copy, table cells |
-| `--text-label` | 13px / 18px | 500 | Field labels, table headers |
-| `--text-small` | 12px / 16px | 400 | Units, timestamps, provenance notes |
-| `--text-micro` | 11px / 14px | 500 | Station ID on the line strip, axis ticks |
+**The scale is in rem, and that is load-bearing rather than a style preference.**
+RESPONSIVE_DESIGN.md Section 3 scales the wall context by moving the root font size once.
+That only works if every size is relative to the root. These tokens were absolute pixels
+until 2026-08-30, so the wall rule changed the root and nothing followed it: the smallest
+text on the wall measured 12px against a documented floor of 18px.
+`tools/a11y/axe_scan.mjs` now measures it, and reports 19.2px.
+
+The rem column is the definition. The pixel column is what it resolves to at the default
+root of 16px, which is every context except the wall.
+
+| Token | Size / line height | At 16px root | Weight | Use |
+|---|---|---|---|---|
+| `--text-display` | 1.75rem / 2rem | 28px / 32px | 600 | The single largest number on Line view (lead time). Used once per screen at most |
+| `--text-title` | 1.25rem / 1.75rem | 20px / 28px | 600 | Page title |
+| `--text-section` | 0.9375rem / 1.375rem | 15px / 22px | 600 | Section heading |
+| `--text-body` | 0.875rem / 1.3125rem | 14px / 21px | 400 | Body copy, table cells |
+| `--text-label` | 0.8125rem / 1.125rem | 13px / 18px | 500 | Field labels, table headers |
+| `--text-small` | 0.75rem / 1rem | 12px / 16px | 400 | Units, timestamps, provenance notes |
+| `--text-micro` | 0.6875rem / 0.875rem | 11px / 14px | 500 | Station ID on the line strip, axis ticks |
+
+Spacing stays in pixels deliberately. Scaling the gaps by 1.6 alongside the type would
+push the 42-station strip off the wall display, and AC-001 requires it to fit without
+scrolling. The scan asserts there is no sideways scroll at any context.
 
 **Wall display scale.** On the 55-inch line-side display the whole scale multiplies by 1.6 via a root font-size change, keeping every ratio identical. See RESPONSIVE_DESIGN.md.
 
@@ -231,7 +245,7 @@ No status icons: status is carried by fill, pattern and label. No AI iconography
   --paper-raised: #FFFFFF;
   --ink: #1A1A1A;
   --ink-2: #4A4A48;
-  --ink-3: #7A7975;
+  --ink-3: #6F6E6A;
   --ink-4: #A8A6A1;
   --rule: #D9D6D0;
   --rule-strong: #B5B2AB;
@@ -284,13 +298,13 @@ Every pairing used in the product, checked against WCAG 2.2 AA. Full table in AC
 
 | Foreground | Background | Ratio | Passes |
 |---|---|---|---|
-| `--ink` | `--paper` | 15.3:1 | AAA |
+| `--ink` | `--paper` | 16.5:1 | AAA |
 | `--ink-2` | `--paper` | 8.4:1 | AAA |
-| `--ink-3` | `--paper` | 4.7:1 | AA |
-| `--ink-4` | `--paper` | 2.7:1 | Non-text only |
-| `--accent` | `--paper` | 10.1:1 | AAA |
-| `#FFFFFF` | `--state-down` | 6.2:1 | AA |
-| `--ink` | `--state-drift` | 5.9:1 | AA |
+| `--ink-3` | `--paper` | 4.9:1 | AA |
+| `--ink-4` | `--paper` | 2.3:1 | Non-text only |
+| `--accent` | `--paper` | 11.1:1 | AAA |
+| `#FFFFFF` | `--state-down` | 7.5:1 | AA |
+| `--ink` | `--state-drift` | 5.4:1 | AA |
 
 `--ink-4` is used only for disabled states and axis ticks, never for information a user must read.
 

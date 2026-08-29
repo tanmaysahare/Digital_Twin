@@ -20,7 +20,7 @@
   --paper-raised: #FFFFFF;
   --ink: #1A1A1A;
   --ink-2: #4A4A48;
-  --ink-3: #7A7975;
+  --ink-3: #6F6E6A;
   --ink-4: #A8A6A1;
   --rule: #D9D6D0;
   --rule-strong: #B5B2AB;
@@ -51,26 +51,26 @@
 
   /* type scale. The largest thing on a screen is barely larger than the
    * smallest: hierarchy comes from weight, spacing and rules, not from scale. */
-  --text-display: 28px;
-  --text-display-line: 32px;
+  --text-display: 1.75rem;
+  --text-display-line: 2rem;
   --text-display-weight: 600;
-  --text-title: 20px;
-  --text-title-line: 28px;
+  --text-title: 1.25rem;
+  --text-title-line: 1.75rem;
   --text-title-weight: 600;
-  --text-section: 15px;
-  --text-section-line: 22px;
+  --text-section: 0.9375rem;
+  --text-section-line: 1.375rem;
   --text-section-weight: 600;
-  --text-body: 14px;
-  --text-body-line: 21px;
+  --text-body: 0.875rem;
+  --text-body-line: 1.3125rem;
   --text-body-weight: 400;
-  --text-label: 13px;
-  --text-label-line: 18px;
+  --text-label: 0.8125rem;
+  --text-label-line: 1.125rem;
   --text-label-weight: 500;
-  --text-small: 12px;
-  --text-small-line: 16px;
+  --text-small: 0.75rem;
+  --text-small-line: 1rem;
   --text-small-weight: 400;
-  --text-micro: 11px;
-  --text-micro-line: 14px;
+  --text-micro: 0.6875rem;
+  --text-micro-line: 0.875rem;
   --text-micro-weight: 500;
   --measure-max: 68ch;
 

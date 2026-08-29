@@ -56,7 +56,9 @@ The most important context and the one usually forgotten.
 - Hover states are suppressed, because nothing hovers on a wall display.
 - The lead time on an action card is set at 64px. It is the single thing that must be readable from the far end of the line.
 
-**Legibility floor.** Nothing on the wall layout is below 18px effective. Verified by an automated check that walks the rendered DOM at 1920 width and fails on any visible text below the floor.
+**Legibility floor.** Nothing on the wall layout is below 18px effective. Verified by `tools/a11y/axe_scan.mjs`, which walks the rendered DOM at 1920 width and reports the smallest visible text. The measured value is 19.2px, which is `--text-micro` at 0.6875rem against a 25.6px root. `docs/quality/ACCESSIBILITY_RESULTS.md` carries the last run.
+
+This check found the scale rule not working. The type tokens were absolute pixels until 2026-08-30, so moving the root font size moved nothing and the wall rendered at the desk sizes. The tokens are now in rem, which is what the paragraph above always claimed.
 
 **Burn-in.** A 55-inch panel showing a static layout for months will retain an image. The layout shifts by one pixel in a slow four-hour cycle. This is invisible to a viewer and is the only unrequested motion in the product.
 
