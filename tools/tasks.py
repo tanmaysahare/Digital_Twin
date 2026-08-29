@@ -109,7 +109,7 @@ TASKS: dict[str, Task] = {
     ),
     "seed": Task(
         "Rebuild the seeded demo database",
-        [Pending("T-024", "the simulator and its ground truth channel")],
+        [_python("-m", "plantsim.run", "--seed")],
     ),
     "evaluate": Task(
         "Regenerate the evidence pack at evaluation/report.md",

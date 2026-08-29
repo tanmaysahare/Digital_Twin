@@ -70,10 +70,17 @@ python -m venv .venv
 .venv/bin/activate            # Windows: .venv\Scripts\activate
 make install                  # Windows without make: .\make.cmd install
 make migrate
+make seed
 ```
 
 `make install` installs the Python package in editable mode with its
 development extras, then installs the web dependencies.
+
+`make seed` runs the simulator once and writes two things: the canonical event
+stream to the `event` table, which is what the twin reads, and the ground truth
+to the `truth` schema, which the application role has no privilege on. It prints
+both counts, and the gap between them is how much of the line the twin cannot
+see. Re-run it whenever a migration has changed shape.
 
 ### 2.3 Running
 
