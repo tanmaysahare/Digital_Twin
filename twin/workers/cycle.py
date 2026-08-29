@@ -1,10 +1,11 @@
 """The forecast worker.
 
 The worker wakes on the configured cadence, runs the cycle in
-ARCHITECTURE.md Section 4, and sleeps. At Phase 0 the cycle body is empty: the
-state estimator arrives at T-038 and the forecaster at T-050. The loop exists
-now so that the service starts, is observable, and has one place for the cycle
-to be attached rather than a new process appearing in Phase 2.
+ARCHITECTURE.md Section 4, and sleeps. The state estimator it will read from is
+built (T-038); the forecaster it will run arrives at T-050, so the cycle body is
+still empty. The loop exists now so that the service starts, is observable, and
+has one place for the cycle to be attached rather than a new process appearing
+in Phase 2.
 """
 
 from __future__ import annotations
