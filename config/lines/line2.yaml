@@ -102,6 +102,17 @@ ingest:
 state:
   window_cycles: 200
   min_cycles: 20
+  transport_tolerance: 0.15
+  max_plausible_cycle_takts: 2.5
+  # Tuned against the simulator: at the first percentile with a ten
+  # percent slack the interval contains ground truth in about 97 percent
+  # of cycles, comfortably above the 90 percent target in PRD Section 5,
+  # without widening the bound to the point of saying nothing.
+  free_flow_quantile: 0.01
+  free_flow_slack: 0.10
+  # S33 to S37 is five stations long. A sixth would take the span past what the
+  # twin is willing to model at all.
+  max_dark_span: 6
 
 forecast:
   horizon_min: 120

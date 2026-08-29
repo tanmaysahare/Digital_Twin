@@ -55,9 +55,18 @@ answer to uneven sensor coverage.
 - Interval width grows monotonically with the number of consecutive dark stations.
 - Two adjacent dark stations with no scan between them produce `UNRESOLVED` for both,
   and no point value is emitted anywhere.
-- Blocking versus starving attribution matches ground truth when the flanking buffers
-  give a signal, and returns `UNKNOWN` when they do not.
+- Blocking versus starving attribution matches ground truth on a span holding one dark
+  station, where the station beyond the span is the only thing that could have held the
+  unit up. On a span of several it returns `UNKNOWN`: measured against the simulator, a
+  blocked label there agreed with the truth 73 percent of the time against a base rate
+  of 72 percent, so it was describing nothing.
 - Every output carries `provenance = INFERRED`.
+- No output has a width of zero, for any input. The transport is nominal rather than
+  measured, so there is always uncertainty left to report.
+
+These fixtures run two 5,000-cycle simulations and are the slowest thing in the suite by
+a wide margin. They stay in the default run because the gate they carry is the one that
+decides whether the project works.
 
 ### `twin.forecast`
 - The DES reproduces analytically known behaviour on a two-station line with
@@ -111,7 +120,8 @@ Where a property is easier to state than a set of examples.
 
 | Property | Statement |
 |---|---|
-| Virtual sensor soundness | For any line topology and any set of dark stations, the derived interval for a dark station contains its true cycle time whenever the flanking observations are complete |
+| Virtual sensor upper bound | For any line topology and any set of dark stations, the derived upper bound is at least the true cycle time whenever the flanking observations are complete. A unit cannot have worked for longer than it was gone |
+| Virtual sensor coverage | The derived interval contains the true cycle time in at least 90 percent of cycles. Not in all of them: the lower bound comes from the quickest comparable passage recently seen, which is a statistical bound and not a guarantee (TECHNICAL_SPEC.md Section 4.3) |
 | Interval monotonicity | Adding a dark station to a span never narrows the interval for any station in that span |
 | Conservation | Units in equals units out plus work in progress plus scrapped, at every point in a simulated run |
 | Loss accounting | Blocked plus starved plus down plus changeover plus running time equals elapsed time, per station, within rounding |

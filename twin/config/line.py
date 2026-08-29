@@ -111,12 +111,33 @@ class IngestPolicy(Strict):
 
 
 class StatePolicy(Strict):
-    """Rolling window sizes for the distribution fits. Section 4.2."""
+    """Distribution fitting and the virtual sensors. Sections 4.2 and 4.3."""
 
     window_cycles: int = Field(default=200, ge=20)
     # Below this a station has no usable distribution and is excluded from the
     # forecast, with the interface saying how many cycles remain.
     min_cycles: int = Field(default=20, ge=2)
+    # How far the real transport time may sit either side of the nominal one in
+    # the line definition. This is the only reason a single dark station between
+    # two instrumented ones still yields an interval rather than a point: the
+    # twin does not know the transport exactly, and pretending it does would be
+    # the first step towards presenting an inference as a reading.
+    transport_tolerance: float = Field(default=0.15, gt=0.0, le=0.5)
+    # The most a station could plausibly take, as a multiple of takt. It sets
+    # how fast an individual bound widens when several dark stations share one
+    # span, and it is a plant judgement rather than a constant.
+    max_plausible_cycle_takts: float = Field(default=2.5, gt=1.0, le=10.0)
+    # The lower bound on a dark span's work content comes from the fastest
+    # comparable transit recently observed, which is the same reasoning
+    # TECHNICAL_SPEC.md Section 11 uses for transport times: the quickest
+    # observed passage is close to pure work. The slack is what buys the
+    # coverage target, since a unit can be genuinely faster than any seen so far.
+    free_flow_quantile: float = Field(default=0.01, gt=0.0, le=0.5)
+    free_flow_slack: float = Field(default=0.10, ge=0.0, le=0.5)
+    # A contiguous run of dark stations longer than this cannot be modelled at
+    # all, and the twin says so rather than producing an interval so wide it is
+    # meaningless (EC-18).
+    max_dark_span: int = Field(default=6, ge=1)
 
 
 class ForecastPolicy(Strict):

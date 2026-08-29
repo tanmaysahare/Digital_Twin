@@ -72,6 +72,17 @@ ingest:
 state:
   window_cycles: 120
   min_cycles: 20
+  # A slower line with smaller buffers. The transport is longer and less
+  # consistent, so the tolerance the twin allows itself is wider.
+  transport_tolerance: 0.18
+  max_plausible_cycle_takts: 2.5
+  # Tuned against the simulator: at the first percentile with a ten
+  # percent slack the interval contains ground truth in about 97 percent
+  # of cycles, comfortably above the 90 percent target in PRD Section 5,
+  # without widening the bound to the point of saying nothing.
+  free_flow_quantile: 0.01
+  free_flow_slack: 0.10
+  max_dark_span: 5
 
 forecast:
   horizon_min: 180
