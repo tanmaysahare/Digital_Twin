@@ -60,6 +60,34 @@
 
 **Phase 1 exit:** T-020 to T-043 closed. **Gate: if T-040's coverage is below 90 percent, stop and reassess before Phase 2.**
 
+**Closed.** The gate passes. Over 5,000 cycles on both lines the derived interval
+contains the simulator's ground truth in about 97 percent of cycles, against the 90
+percent target in PRD Section 5. Four findings from the phase are recorded because they
+changed the specification rather than only the code:
+
+1. **The bound in TECHNICAL_SPEC.md Section 4.3 could not be implemented as written.** It
+   defined `u` and `d` as the nearest instrumented stations either side of a dark run,
+   then subtracted the cycle times of monitored stations between them. By that
+   definition there are none, so the sum was always empty and the bound collapsed to
+   `lo = hi = span_work`: a point value for a dark station, which contradicts rule 3 in
+   CLAUDE.md, STA-04's own wording, and the closing line of the same section, which
+   derives a confidence from the interval width. Section 4.3 is rewritten around what
+   the evidence actually supports.
+2. **A gate result is not a timing anchor.** An inspection verdict carries the latency of
+   the inspection, so using it to bound a cycle time would make the last dark station
+   look monitored. S42 therefore has no downstream scan at all and yields no number,
+   which is the honest outcome and generates a Sensor Value Card rather than a bound.
+3. **The lower bound on a dark span is statistical, not structural.** No pair of flanking
+   timestamps can separate a long passage from a slow one. The bound comes from the
+   quickest comparable passage recently seen, which is why the target is coverage in 90
+   percent of cycles rather than in all of them. TECHNICAL_SPEC.md Section 4.3 now says
+   so explicitly.
+4. **Blocking cannot be attributed on a span of several dark stations.** Measured against
+   the simulator, a blocked label on the five-station run agreed with the truth 73
+   percent of the time against a base rate of 72 percent. It carried no information, so
+   the span reports `UNKNOWN`. On a separable span the same label agrees 81 percent of
+   the time against a 75 percent base rate and is kept.
+
 ---
 
 ## Phase 2: Prediction and evidence

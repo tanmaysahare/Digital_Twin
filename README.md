@@ -73,16 +73,35 @@ wireframes.
 
 ## What runs today
 
-Phase 0 of `docs/ai/TASKS.md`: the repository skeleton, continuous integration, the
-five-service Docker Compose stack, the design tokens, the lint suite, the database
-schema with its separate truth schema, and the two line configurations. No simulator,
-no twin, no views yet. Those are Phases 1 to 4.
+Phases 0 and 1 of `docs/ai/TASKS.md`.
+
+Phase 0 is the repository skeleton, continuous integration, the five-service Docker
+Compose stack, the design tokens, the lint suite, the database schema with its separate
+truth schema, and the two line configurations.
+
+Phase 1 is the line and the twin's view of it. The SimPy simulator runs 42 stations,
+nine buffers, three variants, two shifts, three inspection gates and two rework loops,
+and eight scenarios inject into it from a file rather than from code. Its output passes
+through an observability filter that throws away everything six of the stations would
+have said, and what survives is what the twin sees. The twin reconstructs the line
+state from that filtered stream, bounds the cycle time at every station no sensor
+watches, and says plainly which of them it cannot separate at all.
+
+The headline number: over 5,000 cycles, the derived interval at a dark station contains
+the simulator's ground truth in about 97 percent of cycles against a 90 percent target.
+The five stations that sit in a row with no scan between them are reported as
+`UNRESOLVED`, with the scan point that would fix them, and no cycle time is invented for
+any of them. S42 is dark and last, so it has no downstream scan at all and gets no
+number of any kind.
+
+No forecast, no defect model, no views yet. Those are Phases 2 to 4.
 
 ```
 make            list every command
 make install    install Python and Node development dependencies
 make lint       design rules, ruff, mypy strict, eslint, stylelint
 make test       the test suite
+make seed       rebuild the seeded demo database
 make up         start the stack
 ```
 

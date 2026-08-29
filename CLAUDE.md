@@ -185,5 +185,8 @@ tests/
 
 ## Current status
 
-Specification complete. Implementation not started.
-Begin at `docs/ai/TASKS.md`, task T-001.
+Phases 0 and 1 closed. The simulator runs, the connector reads it, and the twin
+reconstructs the line state including bounds at the six stations that emit nothing.
+The T-040 coverage gate passes at about 97 percent against a 90 percent target.
+
+Begin at `docs/ai/TASKS.md`, task T-050.
