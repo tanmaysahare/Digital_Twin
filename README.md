@@ -257,7 +257,13 @@ web/            The Next.js application, three views, no component library
 evaluation/     The harness and the generated evidence pack
 tests/          The test suite
 docs/           The specification set. Start at docs/README.md
+docs/submission/  The business proposal and the demo script, assembled for Round 2
 ```
+
+The Round 2 business proposal, covering problem framing, solution design, target users,
+the business case, the phased roadmap and the risks, is
+`docs/submission/BUSINESS_PROPOSAL.md`. Every number in it is labelled measured, cited or
+assumption, and the measured ones reconcile to `evaluation/metrics.json`.
 
 A test asserts that no station identifier, buffer capacity or threshold from either line
 appears in the source tree. A second line, `config/lines/line7.yaml`, is structurally
