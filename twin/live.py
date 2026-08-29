@@ -6,12 +6,12 @@ the real one: simulator, adapter, normaliser, state estimator, forecaster,
 ledger, gates, API. Nothing here reaches into the simulator's ground truth, and
 nothing here writes anywhere.
 
-**Why the stream is precomputed and then replayed.** Running SimPy and the twin
-in the same process on the same clock would couple the forecast cycle's runtime
-to the line's pace, and a slow cycle would then slow the line it is forecasting,
-which is the one thing a digital twin must never do. The line is simulated once
-at start-up, and the replay then feeds the twin at the configured speed. The
-events are identical either way and the twin cannot tell the difference.
+**Nothing here knows what produced the stream.** The events arrive through
+`connector.replay`, which is the source side of the boundary, and a test asserts
+that no file under `twin/` imports the simulator at all. That is not tidiness:
+it is the reason this same code can be pointed at a historian and run unchanged.
+Building the stream is deferred until the twin starts, so a process that only
+wants `/health` does not simulate a line to answer it.
 
 **Why there is a warm-up.** A real twin is attached to a line that has been
 running for months. Started cold it has no baseline, no distribution to detect
@@ -39,9 +39,7 @@ from pathlib import Path
 
 from connector.normalise import Normaliser
 from connector.protocol import CanonicalEvent, SourceHealth
-from evaluation.harness import load, simulate
-from plantsim.parameters import PlantModel
-from plantsim.scenarios import ScenarioCatalogue
+from connector.replay import ReplaySource, build_replay_source
 from twin.config.line import LineDefinition
 from twin.domain.shifts import ProductionCalendar
 from twin.pipeline import CycleResult, TwinPipeline
@@ -151,13 +149,15 @@ class LiveTwin:
     """
 
     settings: LiveSettings = field(default_factory=LiveSettings.from_environment)
+    # The stream, and the two facts about it a twin needs. A test builds its own
+    # rather than simulating a line, which is what makes this class testable at
+    # all.
+    source: ReplaySource | None = None
 
     line: LineDefinition = field(init=False)
     calendar: ProductionCalendar = field(init=False)
     pipeline: TwinPipeline = field(init=False)
     normaliser: Normaliser = field(init=False)
-    plant: PlantModel = field(init=False)
-    catalogue: ScenarioCatalogue = field(init=False)
 
     _events: tuple[CanonicalEvent, ...] = field(default=(), repr=False)
     _cursor: int = field(default=0, repr=False)
@@ -171,20 +171,24 @@ class LiveTwin:
     _note: str = field(default="", repr=False)
 
     def __post_init__(self) -> None:
-        """Load the configuration and build the twin, without running anything."""
-        line, plant, catalogue = load(self.settings.line_name)
-        self.line = line
-        self.calendar = ProductionCalendar(line, plant.epoch)
+        """Build the source and the twin, without running either."""
+        source = self.source or build_replay_source(
+            self.settings.line_name,
+            self.settings.scenario_id,
+            self.settings.seed,
+            self.settings.units,
+        )
+        self.source = source
+        self.line = source.line
+        self.calendar = ProductionCalendar(source.line, source.epoch)
         self.pipeline = TwinPipeline(
-            line=line,
+            line=source.line,
             calendar=self.calendar,
             replications=self.settings.replications,
             cadence_s=self.settings.warm_cadence_s,
             horizon_min=self.settings.horizon_min,
         )
-        self.normaliser = Normaliser(line)
-        self.plant = plant
-        self.catalogue = catalogue
+        self.normaliser = Normaliser(source.line)
 
     # -- lifecycle --------------------------------------------------------
 
@@ -203,20 +207,14 @@ class LiveTwin:
             thread.join(timeout=5.0)
 
     def _run(self) -> None:
-        """Build the stream, warm up, then feed at the configured speed."""
-        result = simulate(
-            self.line,
-            self.plant,
-            self.catalogue,
-            self.settings.scenario_id,
-            self.settings.seed,
-            self.settings.units,
-        )
+        """Take the stream, warm up, then feed at the configured speed."""
+        source = self.source
+        if source is None:  # pragma: no cover - built in __post_init__
+            return
         with self._lock:
-            self._events = tuple(result.events)
+            self._events = source.events
             self._note = (
-                f"Replaying scenario {self.settings.scenario_id} at "
-                f"{self.settings.speed:.0f}x from a {self.settings.units} unit run."
+                f"Replaying {source.description} at {self.settings.speed:.0f}x."
             )
         self._warm_up()
         self._replay()
