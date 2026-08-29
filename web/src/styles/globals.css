@@ -46,11 +46,121 @@
     line-height: var(--text-section-line);
   }
 
+  h3 {
+    margin: 0;
+    font-size: var(--text-section);
+    font-weight: var(--text-section-weight);
+    line-height: var(--text-section-line);
+  }
+
+  h4 {
+    margin: 0;
+    font-size: var(--text-label);
+    font-weight: var(--text-label-weight);
+    line-height: var(--text-label-line);
+  }
+
   p {
+    margin: 0;
     max-width: var(--measure-max);
   }
 
   a {
     color: var(--accent);
+  }
+
+  ul,
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  dl,
+  dd {
+    margin: 0;
+  }
+}
+
+/* Responsive. RESPONSIVE_DESIGN.md. Three contexts, one layout.
+ *
+ * Tablet, 768 to 1024. The regions stack, the strip scrolls sideways, and
+ * targets grow to 44px because the screen is being touched with gloves on.
+ *
+ * Wall, 1920 and above. The whole type scale multiplies by 1.6 through one root
+ * font-size change, so every ratio stays identical and the layout does not have
+ * to be redesigned for a 55 inch display read at three metres. */
+@media (width <= 1024px) {
+  .grid-cols-12 > * {
+    grid-column: span 12 / span 12;
+  }
+
+  button,
+  select,
+  input,
+  a[href] {
+    min-height: 44px;
+  }
+}
+
+@media (width >= 1920px) {
+  html {
+    font-size: 25.6px;
+  }
+}
+
+/* Print. T-116, AC-064. PrintFrame in UI_COMPONENTS.md 32 is expressed here
+ * rather than as a wrapper component, because the thing being changed is the
+ * page and not a subtree of it.
+ *
+ * A4 landscape, interactive controls suppressed, scrollable regions expanded to
+ * their full height, and state fills converted to patterns so that a greyscale
+ * printer does not lose the one thing colour was carrying. */
+@page {
+  size: a4 landscape;
+  margin: 12mm;
+}
+
+@media print {
+  html {
+    font-size: 11px;
+  }
+
+  body {
+    background: var(--paper-raised);
+  }
+
+  header nav,
+  header label,
+  .no-print {
+    display: none;
+  }
+
+  .print-full-width {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* A region that scrolled on screen prints in full. A printed page that says
+   * "8 more not shown" is a printed page missing its evidence. */
+  .overflow-y-auto,
+  .overflow-x-auto {
+    overflow: visible;
+  }
+
+  section {
+    break-inside: avoid;
+  }
+
+  table {
+    break-inside: auto;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: '';
   }
 }

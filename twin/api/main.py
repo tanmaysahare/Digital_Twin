@@ -31,9 +31,13 @@ SERVICE_NAME = "digitaltwin-api"
 # The web container and a developer's browser. No wildcard: the product ships
 # with a stated origin list rather than an open one, and SECURITY_REQUIREMENTS.md
 # Section 6 says plainly what else is missing in the prototype.
+# The web container, a developer's browser, and the alternate port a
+# developer falls back to when 3000 is already taken on their machine.
 ALLOWED_ORIGINS = (
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3100",
+    "http://127.0.0.1:3100",
     "http://web:3000",
 )
 
