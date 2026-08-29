@@ -21,7 +21,7 @@ All specifications, seed data and acceptance tests use one reference line. It is
 | Zones | Body construction S01 to S16, Paint S17 to S26, Final assembly S27 to S42 |
 | Nominal takt | 60 s |
 | Shifts | 2 x 8 h, 30 min break, 20 min changeover between shifts |
-| Nominal output | 440 to 460 units per day |
+| Nominal output | 440 to 460 units per shift, so 880 to 920 per day |
 | Model variants | 3 (V-STD, V-SPT, V-LWB), scheduled mix approximately 55 / 30 / 15 |
 | Buffers | 9 inter-station buffers, capacity 3 to 12 units |
 | Inspection gates | G1 body-in-white after S16, G2 paint inspection after S26, G3 final QC after S42 |
@@ -36,6 +36,14 @@ All specifications, seed data and acceptance tests use one reference line. It is
 | C (dark) | S33-S37, S42 | 6 | No machine data. Manual checklist result, andon events, unit scan at entry to the next instrumented station |
 
 14 percent of stations are dark. This is the case the product exists to handle.
+
+**On the output figure.** Two shifts of 8.5 h, less a 30 minute break and a 20 minute
+changeover each, leave 55,200 production seconds a day, which is 920 slots at a 60 s
+takt. The line plans for 880, and the 40 unit difference is the blocking, starving and
+repair a 42 station line loses when nothing is wrong with it. The simulator is
+dimensioned to land inside 5 percent of that figure and T-020 asserts it. Read as a
+daily figure, 440 to 460 would contradict the takt and the shift pattern beside it in
+this same table, so it is the per shift figure.
 
 ## 2. Users and jobs
 
