@@ -67,3 +67,13 @@ def load_source_mapping(path: Path | str) -> SourceMapping:
 def load_sensor_catalogue(path: Path | str) -> SensorCatalogue:
     """Read and validate the low-cost sensing catalogue."""
     return _load(Path(path), SensorCatalogue, "sensor catalogue")
+
+
+def load_config(path: Path | str, model: type[Model], what: str) -> Model:
+    """Read and validate any configuration file against a pydantic model.
+
+    The simulator's own parameters use this. They are deliberately not part of
+    the `LineDefinition`: the twin loads the line definition, and if the true
+    cycle times lived in it the twin would be reading the answer.
+    """
+    return _load(Path(path), model, what)

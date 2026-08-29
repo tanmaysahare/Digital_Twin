@@ -1,0 +1,96 @@
+# The simulator's parameters for Line 7. Ground truth, not configuration.
+#
+# The second line exists to prove that onboarding is files rather than code
+# (ONB-04). It carries the two dark-station cases in their clearest form: W05
+# sits alone between two instrumented stations, so its cycle time is separable
+# and the interval is narrow; W11 to W14 are four in a row with no scan between
+# them, so only their sum is separable and all four are UNRESOLVED (STA-07).
+#
+# The twin never loads this file. See config/plantsim/line2.yaml for why.
+
+line_id: line7
+description: Line 7 chassis as the plant actually behaves
+epoch: "2026-03-02T07:00:00+00:00"
+
+transport_cv: 0.04
+gate_latency_s: 60.0
+
+station_defaults:
+  cycle_cv: 0.07
+  # A slower, heavier line breaks down less often and takes longer to fix.
+  mtbf_s: 300000.0
+  mttr_median_s: 150.0
+  mttr_sigma: 0.6
+
+zones:
+  - id: frame
+    temperature_c: 21.0
+    temperature_sd_c: 0.8
+    humidity_pct: 42.0
+    humidity_sd_pct: 2.5
+    variant_cycle_factor: {C-BASE: 1.00, C-XL: 1.08}
+  - id: trim
+    temperature_c: 23.0
+    temperature_sd_c: 0.6
+    humidity_pct: 46.0
+    humidity_sd_pct: 2.0
+    variant_cycle_factor: {C-BASE: 1.00, C-XL: 1.12}
+
+stations:
+  - {id: W01, base_cycle_s: 80.0}
+  - {id: W02, base_cycle_s: 78.0}
+  - {id: W03, base_cycle_s: 82.0}
+  - {id: W04, base_cycle_s: 79.0, cycle_cv: 0.11}
+  # Alone between two instrumented stations. This is the case the virtual
+  # sensor resolves to a narrow interval, and the case the coverage test uses.
+  - {id: W05, base_cycle_s: 84.0, cycle_cv: 0.12}
+  - {id: W06, base_cycle_s: 77.0}
+  - {id: W07, base_cycle_s: 81.0}
+  - {id: W08, base_cycle_s: 78.0}
+  - {id: W09, base_cycle_s: 80.0, cycle_cv: 0.11}
+  - {id: W10, base_cycle_s: 74.0, cycle_cv: 0.11}
+  # Four in a row with no scan between them. Only the sum is separable.
+  - {id: W11, base_cycle_s: 77.0, cycle_cv: 0.12}
+  - {id: W12, base_cycle_s: 80.0, cycle_cv: 0.12}
+  - {id: W13, base_cycle_s: 76.0, cycle_cv: 0.12}
+  - {id: W14, base_cycle_s: 78.0, cycle_cv: 0.12}
+  - {id: W15, base_cycle_s: 75.0}
+  - {id: W16, base_cycle_s: 79.0}
+  - {id: W17, base_cycle_s: 77.0, cycle_cv: 0.12}
+  - {id: W18, base_cycle_s: 73.0}
+
+gates:
+  - {id: Q1, base_failure_rate: 0.010}
+  - {id: Q2, base_failure_rate: 0.013}
+
+defects:
+  cycle_deviation_odds_per_sigma: 1.30
+  cycle_deviation_threshold_sigma: 1.0
+  humidity_odds_per_pct_above: 1.04
+  lot_quality_sigma: 0.28
+  rework_odds_multiplier: 1.5
+  dark_visit_odds_multiplier: 1.0
+
+signals:
+  - {name: torque, unit: N_m, nominal: 96.0, sd: 2.60, cycle_coupling: 0.55}
+  - {name: torque_angle, unit: degree, nominal: 27.0, sd: 1.50, cycle_coupling: 0.30}
+  - {name: motor_current, unit: A, nominal: 9.80, sd: 0.48, cycle_coupling: 0.45}
+  - {name: vibration_rms, unit: mm_s, nominal: 3.40, sd: 0.31, cycle_coupling: 0.40}
+  - {name: dimensional_deviation, unit: mm, nominal: 0.09, sd: 0.12, cycle_coupling: 0.35}
+
+materials:
+  - {part: axle carrier, station: W02, lot_size: 90, lot_prefix: X, lot_start: 1180}
+  - {part: cab floor mat, station: W16, lot_size: 120, lot_prefix: M, lot_start: 3340}
+
+manual_check_latency_s: 120.0
+env_sample_s: 300.0
+max_rework_passes: 1
+
+unit_id_prefix: 1FUJGLDR9CS
+unit_id_start: 200000
+
+operator_group_by_shift: {D: D-crew}
+
+# One shift at a 92 s takt gives 293 takt slots a day. The line plans for
+# 280.
+nominal_output_per_day: 280

@@ -53,13 +53,19 @@ Digital_Twin/
     lines/line7.yaml         a structurally different line, for ONB-04
     sources/sim.yaml         SourceMapping for the simulator
     catalogue/sensors.yaml   the low-cost sensing catalogue
+    plantsim/line2.yaml      the simulator's own parameters. The twin never
+    plantsim/line7.yaml      loads these: they are the answer, not the question
+    plantsim/scenarios.yaml  SC-01 to SC-08 as configuration, not as code
   plantsim/
+    parameters.py            the plant model, loaded from config/plantsim/
     model.py                 the SimPy line model
-    scenarios.py             SC-01 to SC-08
+    scenarios.py             scenario injection
     emit.py                  canonical event emission with tier filtering
     truth.py                 ground-truth channel, written to a separate store
   connector/
-    protocol.py              SourceAdapter, read-only by construction
+    protocol.py              SourceAdapter and CanonicalEvent, read-only by
+                             construction
+    payloads.py              one pydantic model per canonical event type
     sim_adapter.py
     csv_replay_adapter.py
     normalise.py             reordering window, clock skew, health
@@ -75,6 +81,8 @@ Digital_Twin/
       engine.py              settings and the engine
       migration.py           running and comparing migrations
     domain/                  dataclasses: Estimate, LineState, ProcessSignature
+      shifts.py              the production calendar, from the shift pattern
+      seeds.py               deterministic seeding for every stochastic path
     state/estimator.py
     state/virtual_sensors.py
     state/distributions.py
@@ -184,33 +192,99 @@ excluded from forecasting and the interface says how many cycles remain.
 
 ### 4.3 Virtual sensors for Tier C stations
 
-For a dark station `k` with nearest instrumented upstream `u` and downstream `d`:
+For a run of `m` dark stations with the nearest instrumented station upstream `u` and
+the nearest one downstream `d`, the twin has four things: the departure scan at `u`, the
+arrival scan at `d`, the nominal transports from the `LineDefinition`, and unit
+conservation. How many units are inside the span at any moment is the count that went in
+less the count that came out, and that count is exact wherever both flanking sources are
+complete.
 
 ```
-span_observed = ts_arrive(d, unit) - ts_depart(u, unit)
-span_transport = sum(transport_time(i, i+1) for i in u..d-1)
-span_work = span_observed - span_transport
+transit    = ts_arrive(d, unit) - ts_depart(u, unit) - non_production_overlap
+transport  in [ nominal * (1 - transport_tolerance),
+                nominal * (1 + transport_tolerance) ]
+work       in [ transit - transport.upper, transit - transport.lower ]
 
-cycle_time(k) in [ lo, hi ]
-  where, if k is the only dark station between u and d:
-      lo = span_work - sum(cycle_time(j) for j in u+1..d-1 if j is monitored).upper
-      hi = span_work - sum(cycle_time(j) for j in u+1..d-1 if j is monitored).lower
-  and if m dark stations share the span:
-      the bound applies to their sum, and each station's individual bound is
-      [ max(0, sum_lo - (m-1) * max_plausible), sum_hi ]
-      which widens quickly with m. This is correct and it is shown.
+sum of the dark stations' cycle times in [ lo, hi ]
+    hi = work.upper
+    lo = work.lower                where free flow is certified
+       = min(work.lower, floor)    otherwise
 ```
 
-**Blocking and starving attribution.** During `span_work`, if the buffer downstream of
-`d` was at capacity, the excess is attributed to blocking; if the buffer upstream of `u`
-was empty, to starving; otherwise to work. Where the flanking buffers give no signal,
-the attribution is `UNKNOWN` and the interface says the three states cannot be
-separated.
+**The upper bound is sound.** A unit cannot have done more work than the time it spent,
+and waiting is never negative.
+
+**The lower bound is the difficult half**, and it is where the honesty of the module
+sits. A unit that took 340 s across a span may have worked for 340 s or for 268 s, and
+no timestamp at either end separates those. Two things bound it.
+
+*Free flow.* If the span held only this unit for the whole passage and the station beyond
+it was never occupied, the unit had nothing to wait for and `work.lower` holds. Both
+conditions are observable: occupancy comes from conservation, and `d` is instrumented, so
+when it was busy is a reading rather than a guess.
+
+*The free-flow floor.* Otherwise the bound comes from the same reasoning Section 11 uses
+for transport times: the quickest observed passage is close to pure work. The floor is
+the `free_flow_quantile` of recent transits for the same variant, less
+`free_flow_slack`. It is a statistical bound and not a guarantee, which is exactly why
+the target in PRD Section 5 is coverage in 90 percent of cycles rather than in all of
+them. Below `min_cycles` comparable passages there is no floor, the lower bound is only
+that work is not negative, and the interface says how many cycles remain (EC-20).
+
+Non-production time inside the passage is subtracted before any of this. A shift break
+inside a span would otherwise read as slow work, and the shift pattern and the
+`SHIFT_MARKER` stream both say when the line was stopped (EC-11).
+
+**Several dark stations in one span.** The bound applies to their sum. Each station's own
+bound is then
+
+```
+[ max(0, sum_lo - (m - 1) * max_plausible), sum_hi ]
+      where max_plausible = takt_s * max_plausible_cycle_takts
+```
+
+which widens quickly with `m`. This is correct and it is shown.
+
+**Blocking and starving attribution.** The bound on non-work always starts at zero,
+because no pair of flanking timestamps can prove that a unit waited. What can be
+established is that a passage took longer than the quickest comparable one, and that is
+the evidence a label rests on:
+
+| Label | Evidence |
+|---|---|
+| `WORK` | The passage is no longer than a free-flowing one |
+| `BLOCKED` | It is longer, and the station beyond the span was occupied for at least the excess |
+| `STARVED` | It is longer, and the span was empty when the unit entered, so its first station had been waiting |
+| `UNKNOWN` | Anything else, which is most of a congested shift. Another unit shared the dark run and nothing at either end says which of the three states this one was in |
+
+A label is only attempted where the span holds one dark station. Where it holds
+several, the answer is always `UNKNOWN`: the station beyond the span is occupied for
+most of a takt on any line running to takt, so its occupancy says nothing about which of
+the unobserved stations delayed a unit, or whether any of them did. Measured against the
+simulator on Line 2, a `BLOCKED` label on the five-station run agreed with the truth 73
+percent of the time against a base rate of 72 percent.
+
+The interface prints `UNKNOWN` rather than the most plausible of the three.
 
 **Unresolvable case (STA-07).** Two or more adjacent Tier C stations with no scan point
-between them yield a bound on their sum but not on either individually. Both are marked
-`UNRESOLVED` and a Sensor Value Card is generated naming the scan point that would fix
-it. No number is invented.
+between them yield a bound on their sum but not on any one of them. All of them are
+marked `UNRESOLVED` and a Sensor Value Card is generated naming the scan point that
+would fix it. No number is invented.
+
+A dark station with no instrumented station on both sides of it gets nothing at all.
+On Line 2 that is S42, which is dark and last: there is no second timestamp, so there is
+no span, so there is no bound. It is reported as `UNRESOLVED` with the sensor that would
+resolve it, and no cycle time appears for it anywhere.
+
+**An inspection result is not a downstream anchor.** Its timestamp says when a verdict
+was recorded, not when a unit stopped moving, and a gate carries a real latency. Using
+one as a timing anchor would make the last dark station look monitored when it is not.
+The same holds for a manual checklist result, which is filled in when the operator gets
+to it.
+
+**A dark run longer than the line allows is not modelled at all** (EC-18). Past
+`max_dark_span` contiguous stations, the twin reports that the zone cannot be modelled
+rather than producing an interval so wide it says nothing.
 
 Every output of this module is an `Estimate` with `provenance = "INFERRED"` and a
 confidence derived from the interval width relative to the station's plausible range.
@@ -570,6 +644,19 @@ gates:
   - {id: G3, after: S42, name: Final QC}
 rework:
   - {from: G1, to: S12}
+state:
+  window_cycles: 200
+  min_cycles: 20
+  # How far a real transport may sit either side of the nominal one. This is why
+  # a lone dark station between two instrumented ones still yields an interval.
+  transport_tolerance: 0.15
+  max_plausible_cycle_takts: 2.5
+  # The free-flow floor in Section 4.3. Tuned against the simulator: at the
+  # first percentile with a ten percent slack the derived interval contains
+  # ground truth in about 97 percent of cycles.
+  free_flow_quantile: 0.01
+  free_flow_slack: 0.10
+  max_dark_span: 6
 forecast:
   horizon_min: 120
   cadence_s: 120
@@ -589,6 +676,13 @@ gates_policy:
 ```
 
 No station ID, capacity or threshold appears anywhere in code.
+
+`config/plantsim/*.yaml` holds the simulator's own parameters: true cycle times,
+failure and repair distributions, defect causes, environment, materials and the
+plant's unit identifier scheme. The twin never loads them, for the same reason
+the ground truth they produce lives in a database schema the twin's role cannot
+read. `config/plantsim/scenarios.yaml` holds SC-01 to SC-08, so a scenario is a
+row in a file rather than a branch in the simulator.
 
 ---
 
