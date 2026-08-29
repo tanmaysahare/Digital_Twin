@@ -724,6 +724,7 @@ class Forecaster:
         replications: int | None = None,
         horizon_s: float | None = None,
         extrapolate: bool = True,
+        shape: LineShape | None = None,
     ) -> ForecastRun:
         """Run R replications from one state.
 
@@ -736,6 +737,9 @@ class Forecaster:
             horizon_s: how far forward. Defaults to the line's own policy.
             extrapolate: whether drifting stations are carried forward. False is
                 the control for T-052 and is never used in production.
+            shape: an altered line to run against, which is how the
+                counterfactual sandbox changes takt and buffer capacity
+                (T-094). Defaults to the line as configured.
 
         Returns:
             Every replication, unaggregated. `aggregate.py` turns them into the
@@ -743,11 +747,12 @@ class Forecaster:
         """
         count = replications or self.line.forecast.replications
         span = horizon_s or self.line.forecast.horizon_min * 60.0
+        running = shape or self._shape
         clock = _Clock(self.calendar, seed.at_s, seed.at_s + span + HORIZON_MARGIN_S)
         started = time.monotonic()
         runs = tuple(
             simulate_once(
-                self._shape,
+                running,
                 seed,
                 clock,
                 generator_for(cycle_id, index),

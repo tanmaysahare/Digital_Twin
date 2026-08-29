@@ -98,6 +98,12 @@ ignore = [
 # The report renders a document. Its writers take the summary, the settings,
 # the runs and the determinism result because a report needs all four.
 "evaluation/report.py" = ["PLR0913", "PLR0917"]
+# A serialiser assembles one response out of many parts, and a response with
+# nine fields needs nine of them. Folding them into a carrier object would
+# move the argument list rather than shorten it, and the carrier would exist
+# only to satisfy the rule.
+"twin/api/serialise.py" = ["PLR0913", "PLR0917"]
+"twin/api/routes.py" = ["PLR0913", "PLR0917"]
 # SHAP is optional at runtime and is imported where it is used, so that a
 # missing explainer degrades that one capability rather than the process.
 "twin/defect/explain.py" = ["PLC0415"]

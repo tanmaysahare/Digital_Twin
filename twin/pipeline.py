@@ -53,6 +53,7 @@ from twin.ledger.store import (
     make_prediction_id,
 )
 from twin.state.estimator import StateEstimator
+from twin.state.losses import LossLedger
 
 # How many recent passages a dark station's forecast pool is drawn from. Longer
 # than the drift detector's reference window would let a dark station that has
@@ -108,6 +109,7 @@ class TwinPipeline:
     drift: DriftDetector = field(init=False)
     activity: ActivePeriodTracker = field(init=False)
     observed: StallObserver = field(init=False)
+    losses: LossLedger = field(init=False)
     forecaster: Forecaster = field(init=False)
     joiner: OutcomeJoiner = field(init=False)
     defect: DefectService = field(init=False)
@@ -117,6 +119,7 @@ class TwinPipeline:
     _next_cycle_at: datetime | None = field(default=None, repr=False)
     _last_at: datetime | None = field(default=None, repr=False)
     _completed: set[str] = field(default_factory=set, repr=False)
+    _completed_at: list[datetime] = field(default_factory=list, repr=False)
     _cycle_history: dict[str, list[tuple[datetime, float]]] = field(
         default_factory=dict, repr=False
     )
@@ -134,6 +137,7 @@ class TwinPipeline:
         self.drift = DriftDetector(self.line)
         self.activity = ActivePeriodTracker(self.line)
         self.observed = StallObserver(self.line, self.calendar)
+        self.losses = LossLedger(self.line, self.calendar)
         self.forecaster = Forecaster(self.line, self.calendar)
         self.joiner = OutcomeJoiner(self.line, self.calendar, self.store)
         self.defect = DefectService(
@@ -166,6 +170,7 @@ class TwinPipeline:
         self.estimator.apply(event)
         self.activity.observe(event)
         self.observed.observe(event)
+        self.losses.observe(event)
         self._track(event)
         at = event.ts_source
         self._last_at = at
@@ -220,8 +225,14 @@ class TwinPipeline:
                 self.defect.observe_gate_result(
                     signature, gate_id, event.ts_source, passed=passed
                 )
-            if self.line.gates and gate_id == self.line.gates[-1].gate_id:
+            if (
+                self.line.gates
+                and gate_id == self.line.gates[-1].gate_id
+                and passed
+                and event.unit_id not in self._completed
+            ):
                 self._completed.add(event.unit_id)
+                self._completed_at.append(event.ts_source)
 
     # -- the cycle --------------------------------------------------------
 
@@ -298,6 +309,45 @@ class TwinPipeline:
             return
         self._trained_at_count = self._labelled
         self._training_report = self.defect.train(at)
+
+    @property
+    def completed_units(self) -> int:
+        """How many units have cleared the last gate since the run began."""
+        return len(self._completed)
+
+    def completed_since(self, since: datetime) -> int:
+        """How many units have cleared the last gate since an instant.
+
+        The shift's output is what a supervisor is judged on, and the run's
+        output is not it. Counting the whole run against a shift target made
+        the line look hundreds of units ahead of a pace it was in fact
+        behind.
+        """
+        return sum(1 for at in self._completed_at if at >= since)
+
+    @property
+    def gate_results(self) -> tuple[GateOutcome, ...]:
+        """Every gate verdict seen, in the order they arrived."""
+        return tuple(self._gate_results)
+
+    def cycle_series(
+        self, station_id: str, variant_id: str | None = None
+    ) -> tuple[tuple[datetime, float], ...]:
+        """One station's recorded cycles, for the drawer and the evidence panel.
+
+        With no variant this pools every variant in time order, which is what a
+        chart of "what has this station been doing" wants. The drift charts
+        never pool, because a long-wheelbase body genuinely takes longer at the
+        same station and pooling would hide it; a chart a person reads is a
+        different question from a chart a detector reads.
+        """
+        if variant_id is not None:
+            return tuple(self._cycle_history.get(f"{station_id}|{variant_id}", ()))
+        found: list[tuple[datetime, float]] = []
+        for key, values in self._cycle_history.items():
+            if key.split("|", 1)[0] == station_id:
+                found.extend(values)
+        return tuple(sorted(found, key=lambda item: item[0]))
 
     @property
     def training_report(self) -> dict[str, str]:

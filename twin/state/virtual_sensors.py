@@ -513,8 +513,9 @@ class VirtualSensors:
                 if unresolvable
                 else (
                     f"{span.size} dark stations share the span between "
-                    f"{span.upstream_id} and {span.downstream_id}, so their total "
-                    f"is bounded but no single one of them is"
+                    f"{span.upstream_id} and {span.downstream_id}. Their total "
+                    f"cycle time is bounded and no one of them can be separated "
+                    f"from the others."
                 )
             )
             found.extend(
