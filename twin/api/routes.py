@@ -681,6 +681,12 @@ def _intervention(entry: InterventionIn) -> Intervention:
 def mark_executed(context: Ctx, run_id: str, request: DecisionIn) -> DecisionOut:
     """Record that an option was chosen. It changes nothing on the line."""
     with context.reading() as twin:
+        # A decision is stamped with the twin's clock rather than the wall
+        # clock, so a twin that has seen no events cannot honestly record one.
+        # Every other route says so with the same sentence; this one used to
+        # raise instead, which reached the caller as a 500.
+        if not twin.ready:
+            raise _not_ready(context)
         at = twin.pipeline.estimator.state().at
     decision = Decision(
         run_id=run_id, label=request.label, recorded_at=at, note=request.note

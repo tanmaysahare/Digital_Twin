@@ -36,6 +36,10 @@ dev = [
   "mypy>=1.9",
   "types-pyyaml",
   "pip-audit>=2.7",
+  # starlette's TestClient refuses to import without it, and the API boundary
+  # tests drive the routes through that client rather than around it. Test
+  # dependency only: nothing under twin/ imports it.
+  "httpx2>=2.12",
 ]
 
 [tool.setuptools]
