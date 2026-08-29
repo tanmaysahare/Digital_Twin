@@ -69,7 +69,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from connector.protocol import CanonicalEvent
@@ -87,6 +87,27 @@ _CROWDED = 2
 # attribute. Expressed as a share of takt so it moves with the line rather than
 # being a constant in code.
 _ATTRIBUTION_TOLERANCE_TAKTS = 0.05
+
+# How much of the excess the station beyond the span has to have been occupied
+# for, immediately before the unit reached it, before the excess is called
+# blocking.
+#
+# The test used to be whether that station was occupied for at least the excess
+# at any point during the passage, and that test does not discriminate. On any
+# line running to takt the station beyond a span is occupied for most of every
+# takt, so the condition holds on almost every passage: measured on Line 7 it
+# labelled 4,891 of 5,000 passages `BLOCKED` and agreed with the truth 74 percent
+# of the time against a base rate of 73 percent, which is to say it carried
+# nothing. It is the same argument TECHNICAL_SPEC.md Section 4.3 already makes
+# for why a span of several dark stations cannot be attributed, and it turns out
+# to apply to a span of one as well unless the evidence is narrowed.
+#
+# What does discriminate is *when* that station was occupied. A unit held up on
+# its way out of the span is held up at the end of the passage, in the stretch
+# where it would already have arrived had it been free-flowing. Asking whether
+# the exit was occupied through that stretch, rather than at any point in the
+# passage, is a question whose answer is not almost always yes.
+_BLOCKED_TAIL_SHARE = 0.9
 
 
 @dataclass(frozen=True)
@@ -366,6 +387,18 @@ class _SpanTracker:
             was_starved=was_empty,
         )
 
+    def busy_between(self, start: datetime, end: datetime) -> float:
+        """How long the station beyond the span was occupied over a window.
+
+        Includes the interval that is still open, because a station holding a
+        unit right now has been holding it since it took it, and leaving that out
+        would make the most recent passage look unobstructed.
+        """
+        total = self._busy_overlap(start, end)
+        if self._exit_since is not None and end > self._exit_since:
+            total += (end - max(start, self._exit_since)).total_seconds()
+        return total
+
     def _busy_overlap(self, start: datetime, end: datetime) -> float:
         total = 0.0
         for busy_from, busy_to in self._exit_busy:
@@ -591,7 +624,10 @@ class VirtualSensors:
             total=total,
             per_station=self._per_station(span, interval, clamped=clamped),
             attribution=self._attribute(
-                span, observation, _WorkBounds(work_lo, work_hi, floor, interval)
+                span,
+                observation,
+                _WorkBounds(work_lo, work_hi, floor, interval),
+                tracker,
             ),
             observation=observation,
         )
@@ -702,7 +738,11 @@ class VirtualSensors:
         return ". ".join(parts)
 
     def _attribute(
-        self, span: DarkSpan, observation: SpanObservation, bounds: _WorkBounds
+        self,
+        span: DarkSpan,
+        observation: SpanObservation,
+        bounds: _WorkBounds,
+        tracker: _SpanTracker,
     ) -> Attribution:
         """Split the unaccounted part of the span, or say it cannot be split.
 
@@ -728,16 +768,22 @@ class VirtualSensors:
                 f"nothing at either end says which of them held the unit, or "
                 f"whether it was working, blocked or starved",
             )
-        return self._attribute_one(observation, bounds, non_work)
+        return self._attribute_one(observation, bounds, non_work, tracker)
 
     def _attribute_one(
-        self, observation: SpanObservation, bounds: _WorkBounds, non_work: Interval
+        self,
+        observation: SpanObservation,
+        bounds: _WorkBounds,
+        non_work: Interval,
+        tracker: _SpanTracker,
     ) -> Attribution:
         """The attribution for a span holding exactly one dark station.
 
         - `WORK` where the passage is no longer than a free-flowing one.
         - `BLOCKED` where it is longer and the station beyond the span was
-          occupied for at least the excess. The excess had somewhere to go.
+          occupied through the stretch at the end of the passage where this unit
+          would already have arrived had it been free-flowing. Occupancy at some
+          point in the passage is not evidence; occupancy in the tail is.
         - `STARVED` where it is longer and the span was empty when the unit
           entered, so the station had been waiting for work.
         - `UNKNOWN` otherwise.
@@ -765,14 +811,16 @@ class VirtualSensors:
                 f"the passage is no longer than the quickest comparable one, "
                 f"which was {bounds.floor:.0f} s, so it is accounted for by work",
             )
-        if observation.exit_blocked_s >= excess:
+        tail_from = observation.exited_at - timedelta(seconds=excess)
+        tail_busy = tracker.busy_between(tail_from, observation.exited_at)
+        if tail_busy >= excess * _BLOCKED_TAIL_SHARE:
             return Attribution(
                 "BLOCKED",
                 non_work,
                 f"the passage ran {excess:.0f} s longer than the quickest "
                 f"comparable one, and the station beyond the span was occupied "
-                f"for {observation.exit_blocked_s:.0f} s while this unit was "
-                f"inside it",
+                f"for {tail_busy:.0f} s of that final stretch, so the unit had "
+                f"nowhere to go",
             )
         if observation.was_starved and observation.crowded_s <= tolerance:
             return Attribution(

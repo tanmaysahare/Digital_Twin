@@ -79,8 +79,28 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D", "ANN", "PLR2004", "T20"]
+"tests/*" = ["D", "ANN", "PLR2004", "T20", "PLR0913", "PLR0917", "ARG001", "SLF001", "PLC0415"]
 "tools/*" = ["T20"]
+# `evaluation/run.py` is what `make evaluate` calls, and a command line tool
+# that produced no output would be a command line tool nobody could use. The
+# harness prints its progress for the same reason: an evaluation that takes
+# twenty minutes has to say where it has got to.
+"evaluation/run.py" = ["T20"]
+"evaluation/harness.py" = ["T20", "PLW0603", "PLC0415", "PLR0913", "PLR0917", "PLR0911"]
+# The numerical kernels take the arguments they take. `simulate_once` needs the
+# line shape, the seed, the clock, the generator and the horizon, and folding
+# them into one object would move the argument list rather than shorten it,
+# while costing an attribute lookup per station visit in the one loop where
+# that is measurable. The branch and statement counts on the same function are
+# the recursion itself, which is one loop and reads as one.
+"twin/forecast/des.py" = ["PLR0913", "PLR0917", "PLR0912", "PLR0915"]
+"twin/forecast/drift.py" = ["PLR0913", "PLR0917"]
+# The report renders a document. Its writers take the summary, the settings,
+# the runs and the determinism result because a report needs all four.
+"evaluation/report.py" = ["PLR0913", "PLR0917"]
+# SHAP is optional at runtime and is imported where it is used, so that a
+# missing explainer degrades that one capability rather than the process.
+"twin/defect/explain.py" = ["PLC0415"]
 # Migration bodies are generated from twin/db/schema.py. Reflowing the generated
 # table definitions to satisfy the line length would make every future
 # regeneration a diff, and upgrade and downgrade say what they do in the module

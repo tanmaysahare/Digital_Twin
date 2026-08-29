@@ -86,12 +86,18 @@ Digital_Twin/
     state/estimator.py
     state/virtual_sensors.py
     state/distributions.py
-    forecast/des.py
+    forecast/des.py            the tandem-line kernel and the seeded state
+    forecast/aggregate.py      replications to probabilities
     forecast/attribution.py
     forecast/drift.py
+    forecast/stall.py          the StallForecast, as it leaves the forecaster
+    forecast/stops.py          what a stall is, and how the twin sees one happen
     defect/features.py
     defect/model.py
     defect/conformal.py
+    defect/explain.py          SHAP and the plant-language template registry
+    defect/risk.py             one risk per unit per gate, with its lead time
+    pipeline.py                the one place the pieces meet
     retro/trace.py
     counterfactual/engine.py
     ledger/store.py
@@ -101,9 +107,10 @@ Digital_Twin/
     api/                     FastAPI routers
     workers/cycle.py
   evaluation/
-    harness.py
-    metrics.py
-    report.py
+    harness.py                 scenario runs across a process pool
+    metrics.py                 every figure PRD Section 5 asks for
+    report.py                  the evidence pack and its own limitations
+    run.py                     what `make evaluate` calls
   web/
     src/app/(line|plan|program)/
     src/components/
@@ -297,21 +304,97 @@ confidence derived from the interval width relative to the station's plausible r
 
 ```
 Inputs:  LineState at t0, cycle-time distributions, transport times, buffer
-         capacities and occupancy, in-process units, upcoming variant sequence,
-         failure and repair distributions per station
-Method:  SimPy model, R replications (default 200), horizon H (default 120 min)
+         capacities and occupancy, in-process units, upcoming variant sequence
+Method:  tandem-line event recursion, R replications (default 200),
+         horizon H (default 120 min)
 Seeds:   replication r uses seed = hash(cycle_id, r), so a cycle is reproducible
 Outputs: per station per 5-min bucket:
-           P(blocked), P(starved), E[buffer occupancy] with quantiles
+           P(stall), P(blocked), P(starved), E[buffer occupancy] with quantiles
          line level:
            distribution of cumulative output over H
-           P(line stop) by bucket, where a stop is any station BLOCKED or STARVED
-           for longer than stop_threshold_s (default 180)
+           P(line stop) by bucket
 ```
 
-Replications run in a process pool across available cores. If the wall-clock budget
-(`forecast_budget_s`, default 20) is exceeded, R is reduced for the next cycle by 25
-percent and the widened intervals are surfaced.
+**What a stop is.** A stall at station k over a five-minute bucket is: the
+production time k lost to blocking or starving inside that bucket exceeds
+`stall_threshold_s`. This sentence used to read "any station BLOCKED or STARVED
+for longer than `stop_threshold_s` (default 180)", and on a paced line those two
+readings are not the same thing. A station whose work content is under takt waits
+a few seconds on every single cycle, because that is what takt means, so a
+*continuous* wait past a threshold happens only inside a long repair. Measured on
+Line 2 over a full simulated day, the only continuous waits past 180 s were the
+line filling at the start of the run, identical in the fault scenarios and in the
+null one, carrying no information at all. The accumulated wait inside a bucket is
+what a supervisor recognises as the line falling behind and it is what a drifting
+station actually produces, so that is the reading implemented, in the forecast, in
+the twin's own observation and in the evaluation harness alike. If those three
+disagreed, every precision figure in the evidence pack would be measuring three
+different things.
+
+`stall_threshold_s` is per line and is calibrated against that line's own physics
+rather than carried over as a round number. It has to sit above the routine idle
+of the least loaded station, which is a fixed share of every bucket, and below
+what a supervisor would call a stoppage. On Line 2 a station's lost time per
+bucket runs to a median of 53 s and a 99th percentile of 116 s on a quiet shift,
+and the configured value is 140 s: nearly half the bucket, about four and a half
+occurrences a shift across the whole line, and roughly doubled by the fault
+scenarios.
+
+**The forecast is not run while any station is still learning.** A station below
+`min_cycles` has no baseline and the flow model falls back to takt for it.
+Blocking and starving propagate the length of the line, so one assumed station
+makes every station's forecast an assumption. The cycle produces no stall claim
+at all and the interface says how many cycles remain (EC-20).
+
+**A stall is never claimed at a station nothing watches.** The six dark stations
+are in the flow model and cause stalls at the instrumented stations around them,
+which is where the claim is made. A claim at S34 could never be confirmed or
+refuted, and the ledger exists to make every claim checkable.
+
+**Uncertainty about a dark station is not variability of it.** A dark station's
+bound is what the twin does not know about a station that is the same station all
+afternoon. A replication draws one position inside that bound and holds it for the
+whole run, so the width of the bound comes out as spread across replications
+rather than as spread within one. Drawing a fresh point per unit treats epistemic
+uncertainty as process variability, and queueing is convex in variability: the
+forecast then manufactures congestion inside the dark run that the real line does
+not have. Measured on Line 2 it predicted about 170 s lost per bucket at each of
+S33 to S37 while those stations were running perfectly well.
+
+**The rare tail is held apart from the rolling window.** A station that fails once
+in five thousand cycles has a four percent chance that any given 200-cycle window
+holds one of those failures. Where it does, resampling that window gives the
+station a failure every two hundred cycles, twenty-five times its real rate; where
+it does not, the forecast believes the station never fails at all. Averaged over
+the line the two errors cancel, which is why the forecast's mean lost time looked
+well calibrated while its alarms were noise. The window is therefore split: the
+core is resampled, and the rare component is drawn at a rate estimated over the
+station's whole history, pooled with the line's where the station has not been
+watched long enough to have one of its own.
+
+Replications run across available cores. If the wall-clock budget
+(`forecast_budget_s`, default 20) is exceeded, R is reduced for the next cycle by
+25 percent and the widened intervals are surfaced.
+
+**On the kernel.** ARCHITECTURE.md Section 9 chose SimPy for this forecast, and
+that choice does not survive its own performance target. `plantsim` runs about
+1,300 station visits a second, and one replication of a 120 minute horizon over 42
+stations is about 6,000 visits, so 200 replications would take some fifteen
+minutes against the 20 second budget in NFR-01. `twin/forecast/des.py` is
+therefore a hand-written event recursion for a tandem line with finite links,
+which is the standard formulation for blocking-after-service and is exact for the
+same model `plantsim` assembles out of SimPy primitives. `plantsim` keeps SimPy,
+where fidelity matters more than speed and where being a different implementation
+from the forecaster is a feature rather than a cost.
+
+**Measured behaviour, Line 2.** The forecaster is close to silent on a line where
+nothing is wrong: over a quiet shift, fewer than one station-cycle in four
+thousand crosses the probability threshold. Under SC-01 the probability at the
+stations downstream of the drift goes to near one across the whole horizon. The
+discrimination is sharp. What the forecast cannot do on this line is say *when*,
+because the stalls it is scored against are largely repair-driven and no forecast
+seeded from the current state can foresee a random failure. The evidence pack
+reports both halves of that rather than the flattering one.
 
 **Drifting stations are extrapolated, not frozen.** Where the drift detector reports a
 sustained shift at station `k` with slope `m`, the forecast samples that station's cycle
@@ -364,6 +447,28 @@ signal when C+ or C- > h,   h = 5 * sigma
 `mu` and `sigma` come from the robust estimates in Section 4.2, computed over a
 reference window that excludes the current suspected drift.
 
+The two estimates need very different amounts of data, and treating them as one
+number makes the chart either blind or noisy. `mu` is a median, which is cheap:
+25 cycles put its own standard error near a fifth of a sigma. It is per variant,
+because a long-wheelbase body genuinely takes longer at the same station. `sigma`
+is a median absolute deviation, which is expensive: from 20 points its standard
+error is about 20 percent of itself, and the whole of the chart's arithmetic is in
+units of it, so an underestimate shrinks `k` and `h` together and the chart
+signals on ordinary noise. Measured on a stable simulated station, a 20-cycle
+reference produced a first signal at cycle 50 on a process that never moved.
+`sigma` is therefore estimated from 100 cycles and pooled across the variants at a
+station, on the relative deviation from each variant's own median: the spread of a
+station's cycle time is a property of its fixture and its operator rather than of
+the body on it, and pooling reaches a usable estimate three times sooner.
+
+The exponentially weighted average starts at the target rather than at the first
+observation. Seeding it with the observation makes the statistic equal to that
+observation while its own standard deviation is still a fifth of the process
+sigma, and the chart then signals on the first cycle after any reset more than
+half the time. Both charts reset together when an episode closes, because an
+average that still carries the old episode re-signals the moment the cumulative
+sum next crosses, and one drift is then reported as four.
+
 **Onset estimation.** CUSUM gives it directly: the last time the relevant cumulative sum
 was zero. This is what allows the interface to say "drifted since 09:14" rather than
 "drift detected at 09:26", and the difference matters to a supervisor deciding what
@@ -372,6 +477,17 @@ changed.
 **Both charts must signal** before a `DRIFT` event is emitted. Requiring agreement
 roughly halves the false positive rate at a small cost in detection delay, and given
 what false alarms cost here (S-16 to S-19) that is the right trade.
+
+**A signal is not a slope.** Whether a station has moved and whether the move is
+worth forecasting from are two questions. The forecaster extrapolates only where
+the movement is at least as large as the station's own noise. A chart pair tuned
+to catch a one-sigma shift signals on an in-control process every couple of
+hundred cycles by construction, and across 42 stations and three variants that is
+several a shift. Those signals belong in the ledger, where they are scored and
+where a station that produces them keeps its predictor in shadow. They do not
+belong in the forecast's extrapolation, where a spurious slope on eleven stations
+at once turns a useful forecast into a wall of alarm. The evidence pack prints the
+drift detector's measured false positive rate rather than only its hit rate.
 
 Parameters are per-line configurable and their defaults are recorded in
 `config/lines/*.yaml`, not in code.

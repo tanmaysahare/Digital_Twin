@@ -113,7 +113,7 @@ TASKS: dict[str, Task] = {
     ),
     "evaluate": Task(
         "Regenerate the evidence pack at evaluation/report.md",
-        [Pending("T-069", "the evaluation harness")],
+        [_python("-m", "evaluation.run")],
     ),
     "reference-sheets": Task(
         "Regenerate docs/design/REFERENCE_IMAGES/*.svg from the design tokens",

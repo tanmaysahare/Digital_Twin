@@ -119,6 +119,81 @@ changed the specification rather than only the code:
 
 **Phase 2 exit:** `make evaluate` reports real numbers for every metric in PRD Section 5. **Gate: if median lead time is under 15 min or precision is under 0.60, stop and diagnose before Phase 3.**
 
+**Closed, and the gate does not pass.** `make evaluate` runs and reports every
+metric. The stall forecaster's precision and lead time are both below the gate,
+and the diagnosis is in `evaluation/report.md` Section 10 and summarised here.
+Phase 3 does not start until the decision in point 5 below is taken.
+
+Seven findings from the phase are recorded because each of them changed the
+specification, the configuration or the simulator rather than only the code.
+
+1. **The stall definition in TECHNICAL_SPEC.md Section 5.1 could not be measured
+   as written.** "Any station BLOCKED or STARVED for longer than 180 s" does not
+   happen on a paced line: a station under takt waits a few seconds on every
+   cycle by construction, so a continuous wait past a threshold occurs only inside
+   a long repair. Over a full simulated day the only such episodes were the line
+   filling at the start of the run, identical in the fault scenarios and in the
+   null one. Section 5.1 now defines a stall as the production time a station
+   loses inside a five-minute bucket, and `stall_threshold_s` on Line 2 is
+   calibrated against that line's own distribution at 140 s rather than left at
+   180.
+
+2. **Two defects in the Phase 1 simulator corrupted every Phase 2 number.** A
+   `cycle_drift` reverted at the end of its ramp, so SC-01 was a fault that healed
+   itself after 90 minutes and disappeared before a 120 minute forecast horizon
+   could close on it; a ramp now holds at its target, because a worn fixture stays
+   worn. And a station waiting for the first unit of the run was recorded as
+   starved, which put a 20 minute stop in the ground truth of every station on
+   every run and swamped every genuine stop the evaluation was meant to count.
+
+3. **The canonical event order was wrong at a hand-off.** `UNIT_ARRIVE` sorted
+   before `UNIT_DEPART` on a shared timestamp, so the next unit's arrival was
+   recorded and the previous unit's departure then cleared it. The twin saw 20 of
+   42 stations holding a unit where 31 really were, and every forecast seeded from
+   that state predicted a starvation wave rolling down a line that was running
+   perfectly well. A station gives its unit up before it takes the next one, and
+   `plantsim/emit.py` now says so.
+
+4. **Every draw in the simulator is keyed on the unit it is about.** With a
+   sequential stream per station, one unit scrapped at G2 shifted every subsequent
+   draw at every station past S26, and a scenario then differed from its control
+   everywhere downstream of the divergence rather than only where it was injected.
+   Measured on SC-01, that showed as changed cycle times at seventeen stations
+   when only S20 had been touched. Keyed on the unit, the same comparison changes
+   exactly S20.
+
+5. **A stall on this line is mostly an unpredictable event, and that is the
+   finding the gate rests on.** The events the forecaster is scored against are
+   dominated by the tail of the repair-time distribution. A drifting station
+   roughly doubles their frequency but does not schedule one, so a forecast seeded
+   from the current state can raise the probability of a stall in a region and a
+   window and cannot pinpoint one 20 to 40 minutes ahead. The forecaster
+   discriminates sharply between a quiet line and a drifting one, and its false
+   alarm rate on a quiet shift is inside the PRD target; its precision and its
+   lead time are not. What the twin can say on this line, and says correctly, is
+   which station has become the constraint and what the line will lose because of
+   it. Whether to change the reference line's parameters so that drift produces a
+   genuine stoppage, or to change what the stall forecaster claims, is a product
+   decision and it is open.
+
+6. **Four modelling errors in the forecaster, each measured before it was fixed.**
+   A stall claimed at a station nothing watches can never be checked. A rolling
+   window misrepresents a rare heavy tail by a factor of twenty-five in either
+   direction. A dark station's bound is uncertainty about a station, not
+   variability of it, and sampling it per unit manufactured congestion inside the
+   dark run. And the flow model cannot be run at all while a station is still
+   learning its baseline, because one assumed station makes every station's
+   forecast an assumption. All four are recorded in TECHNICAL_SPEC.md Section 5.1.
+
+7. **The average active period needs the period that is still open.** The
+   constraint's active periods merge across cycles precisely because it never
+   waits, so on a line where one station has worked without a break for three
+   hours it has a single unclosed period. Counting only closed periods dropped the
+   bottleneck out of the ranking entirely: measured on SC-01, S20's active period
+   ran to 11,330 s and the method named S11 instead. Periods are now clipped to
+   the window and the open one is counted, and the method names S20 with its
+   average an order of magnitude above the next station.
+
 ---
 
 ## Phase 3: Line view

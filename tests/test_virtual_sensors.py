@@ -302,13 +302,22 @@ def test_blocking_is_claimed_only_where_the_unit_really_waited(
     labelled = _labelled(line7_run, "W04:W06")
     blocked_hit, blocked_total = labelled["BLOCKED"]
     assert blocked_total > 200
-    assert blocked_hit / blocked_total >= 0.75
+    # Measured at 0.99 against a base rate of 0.73. The margin comes from asking
+    # when the station beyond the span was occupied rather than whether it ever
+    # was: on a line running to takt it always was, so the second question
+    # separates nothing (see `_BLOCKED_TAIL_SHARE`).
+    assert blocked_hit / blocked_total >= 0.90
 
     working_hit, working_total = labelled["WORK"]
     assert working_total > 0
     assert working_hit / working_total < blocked_hit / blocked_total - 0.2, (
         "the labels do not separate, so they are describing nothing"
     )
+    # The majority answer is still UNKNOWN, which is the honest one. A labeller
+    # that claimed to know on nearly every passage would be the failure this
+    # module exists to avoid, whatever its precision looked like.
+    unknown_total = _labelled(line7_run, "W04:W06").get("UNKNOWN", (0, 0))[1]
+    assert unknown_total > blocked_total
 
 
 def test_a_span_that_cannot_be_separated_claims_nothing(line2_run: Derived) -> None:

@@ -343,18 +343,26 @@ def test_a_scenario_changes_only_what_it_injects(
     """
     control = _run("line2", 700, seed=3)
     injected = _run("line2", 700, seed=3, scenario_id=scenario_id)
+    # Keyed on the visit rather than on the unit and station, so that a rework
+    # revisit is a separate row instead of overwriting the first pass.
     before = {
-        (visit.unit_id, visit.station_id): visit.cycle_time_s
+        (visit.unit_id, visit.station_id, visit.seq): visit.cycle_time_s
         for visit in control.truth.visits
     }
     after = {
-        (visit.unit_id, visit.station_id): visit.cycle_time_s
+        (visit.unit_id, visit.station_id, visit.seq): visit.cycle_time_s
         for visit in injected.truth.visits
     }
-    changed = {
-        key[1] for key, value in after.items() if abs(before[key] - value) > 1e-9
-    }
+    shared = set(before) & set(after)
+    changed = {key[1] for key in shared if abs(before[key] - after[key]) > 1e-9}
     assert changed == expected
+    # A handful of units take a different route, because a unit that ran long at
+    # the injected station is more likely to fail a gate and that coupling is the
+    # thing the defect model exists to find. It stays a handful: every draw in
+    # the simulator is keyed on the unit it is about, so a unit scrapped in one
+    # run does not shift the draws of every unit behind it (see `_draw_for`).
+    diverged = {key[0] for key in set(before) ^ set(after)}
+    assert len(diverged) <= len(control.truth.units) // 100
 
 
 def test_the_fixture_wear_scenario_stays_inside_its_tolerance_band() -> None:

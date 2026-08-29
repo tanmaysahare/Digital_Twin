@@ -37,6 +37,17 @@ MAD_TO_SIGMA = 1.4826
 # the model-health view reports the flat window.
 MINIMUM_SCALE_S = 1e-6
 
+# A cycle this far above the station's own median is not the station working
+# slowly, it is the station having stopped: a repair, a fumble recovered, a
+# fastener refetched. Four robust standard deviations is well outside anything
+# the paced work produces and comfortably inside anything an interruption does.
+RARE_SIGMA = 4.0
+
+# How many of a station's rare cycles are kept. Enough to sample a magnitude
+# from, few enough that a station which had a bad month is not represented by it
+# for ever.
+RARE_MEMORY = 200
+
 
 @dataclass(frozen=True)
 class CycleDistribution:
@@ -53,6 +64,22 @@ class CycleDistribution:
     # The pool the discrete-event forecast resamples from.
     sample: tuple[float, ...]
     is_usable: bool
+    # The window with its rare interruptions removed, and the rate and magnitudes
+    # of those interruptions estimated over the station's whole history rather
+    # than over the window.
+    #
+    # This split exists because resampling a rolling window misrepresents a rare
+    # heavy tail badly, and the forecast is exactly where that matters. A station
+    # that fails once in five thousand cycles has a four percent chance that any
+    # given 200-cycle window holds one of those failures. Where it does, the
+    # forecast resamples that failure at one draw in two hundred, twenty-five
+    # times its real rate, and predicts a stall at that station with confidence.
+    # Where it does not, the forecast believes the station never fails at all.
+    # Averaged over the line the two errors cancel, which is why the forecast's
+    # mean lost time looked well calibrated while its alarms were noise.
+    core: tuple[float, ...] = ()
+    rare: tuple[float, ...] = ()
+    rare_rate: float = 0.0
 
     def z(self, cycle_s: float) -> float:
         """How many robust standard deviations a cycle sits from the median."""
@@ -69,6 +96,16 @@ class DistributionStore:
             lambda: deque(maxlen=line.state.window_cycles)
         )
         self._counts: dict[tuple[str, str], int] = defaultdict(int)
+        # Rare cycles and how many cycles they were rare out of, kept over the
+        # station's whole history rather than over the rolling window.
+        self._rare: dict[str, deque[float]] = defaultdict(
+            lambda: deque(maxlen=RARE_MEMORY)
+        )
+        self._seen: dict[str, int] = defaultdict(int)
+        self._line_rare: deque[float] = deque(maxlen=RARE_MEMORY)
+        self._line_seen: int = 0
+        self._line_rare_count: int = 0
+        self._rare_count: dict[str, int] = defaultdict(int)
 
     def record(self, station_id: str, variant_id: str, cycle_s: float) -> None:
         """Take one completed cycle into the window."""
@@ -76,6 +113,18 @@ class DistributionStore:
             message = f"{station_id}: a cycle time cannot be negative, got {cycle_s}"
             raise ValueError(message)
         key = (station_id, variant_id)
+        current = self.get(station_id, variant_id)
+        if current is not None and current.is_usable:
+            limit = current.median_s + RARE_SIGMA * max(
+                current.scale_s, MINIMUM_SCALE_S
+            )
+            if cycle_s > limit:
+                self._rare[station_id].append(cycle_s)
+                self._rare_count[station_id] += 1
+                self._line_rare.append(cycle_s)
+                self._line_rare_count += 1
+        self._seen[station_id] += 1
+        self._line_seen += 1
         self._windows[key].append(cycle_s)
         self._counts[key] += 1
 
@@ -99,6 +148,9 @@ class DistributionStore:
         median = statistics.median(values)
         deviations = sorted(abs(value - median) for value in values)
         scale = statistics.median(deviations) * MAD_TO_SIGMA
+        limit = median + RARE_SIGMA * max(scale, MINIMUM_SCALE_S)
+        core = tuple(value for value in window if value <= limit)
+        rare, rate = self._rare_component(station_id)
         return CycleDistribution(
             station_id=station_id,
             variant_id=variant_id,
@@ -109,7 +161,27 @@ class DistributionStore:
             p95_s=_quantile(values, 0.95),
             sample=tuple(window),
             is_usable=len(values) >= self._line.state.min_cycles,
+            core=core or tuple(window),
+            rare=rare,
+            rare_rate=rate,
         )
+
+    def _rare_component(self, station_id: str) -> tuple[tuple[float, ...], float]:
+        """How often this station is interrupted, and by how much.
+
+        Estimated over the station's whole history, and pooled with the line's
+        where the station has not been watched long enough to say. A station is a
+        station: they fail at similar rates on the same line, and a pooled
+        estimate of a rare rate is very much better than a rate of zero or a rate
+        twenty-five times too high.
+        """
+        seen = self._seen[station_id]
+        count = self._rare_count[station_id]
+        if seen >= _RARE_CONFIDENT and count > 0:
+            return tuple(self._rare[station_id]), count / seen
+        if self._line_seen <= 0 or not self._line_rare:
+            return (), 0.0
+        return tuple(self._line_rare), self._line_rare_count / self._line_seen
 
     def usable(self) -> tuple[CycleDistribution, ...]:
         """Every distribution the forecast is allowed to draw from."""
@@ -119,6 +191,11 @@ class DistributionStore:
             if distribution is not None and distribution.is_usable:
                 found.append(distribution)
         return tuple(found)
+
+
+# Below this many observed cycles a station's own rare rate is a count of one
+# or zero, so the line's pooled rate is used instead.
+_RARE_CONFIDENT = 2000
 
 
 def _quantile(ordered: list[float], share: float) -> float:

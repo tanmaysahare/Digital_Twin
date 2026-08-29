@@ -118,7 +118,17 @@ forecast:
   horizon_min: 120
   cadence_s: 120
   replications: 200
-  stall_threshold_s: 180.0
+  # A stall is a five-minute bucket in which a station loses more than this much
+  # production time to blocking or starving (TECHNICAL_SPEC.md Section 5.1).
+  # Calibrated against this line rather than carried over as a round number: on a
+  # quiet shift a station's lost time per bucket runs to a median of 53 s and a
+  # 99th percentile of 116 s, because a station whose work content is under takt
+  # waits a few seconds on every cycle by construction. At 140 s a station has
+  # lost nearly half the bucket, which a supervisor recognises as the line having
+  # stopped moving, and it happens about four and a half times a shift across the
+  # whole line. At the 180 s this file used to carry it happened once in three
+  # shifts, which is not an event a forecast can be measured against.
+  stall_threshold_s: 140.0
   stall_probability_threshold: 0.55
   budget_s: 20.0
   attribution_window_min: 60

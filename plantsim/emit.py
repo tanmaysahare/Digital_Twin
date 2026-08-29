@@ -95,22 +95,39 @@ MACHINE_EVENTS: frozenset[EventType] = frozenset(
 )
 
 # Where two events share a timestamp, this is the order a plant would produce
-# them in. A unit is scanned in before its parts are, its parts before its cycle
-# starts, and its state word is written after whatever caused it. Without a
-# stated order the tie would be broken by an identifier, which is to say
-# arbitrarily, and a part lot scan would land against the wrong visit.
+# them in. Without a stated order the tie would be broken by an identifier, which
+# is to say arbitrarily, and a part lot scan would land against the wrong visit.
+#
+# Three orderings here are load-bearing and each of them is a physical fact.
+#
+# A station finishes a cycle before it gives the unit up, so `CYCLE_END` comes
+# before `UNIT_DEPART`. The gap between them is the station's blocked time, and
+# reversing them would make it unmeasurable.
+#
+# **A station gives its unit up before it takes the next one**, so `UNIT_DEPART`
+# comes before `UNIT_ARRIVE`. On a line where the hand-off is instantaneous the
+# two share a timestamp on every single cycle, and taking the arrival first left
+# the estimator believing the station was empty: the next unit's arrival was
+# recorded and the previous unit's departure then cleared it. Measured on Line 2,
+# the twin saw 20 of 42 stations holding a unit where 31 really were, and every
+# forecast seeded from that state predicted a starvation wave rolling down a line
+# that was running perfectly well. The two events do not collide across stations,
+# because a transport time separates a departure from the arrival it causes.
+#
+# A unit is scanned in before its parts are, its parts before its cycle starts,
+# and a station's state word is written after whatever caused it.
 EVENT_ORDER: dict[EventType, int] = {
     "SHIFT_MARKER": 0,
     "ENV_READING": 1,
-    "UNIT_ARRIVE": 2,
-    "PART_LOT_SCAN": 3,
-    "CYCLE_START": 4,
-    "PROCESS_VALUE": 5,
-    "CYCLE_END": 6,
-    "MANUAL_CHECK": 7,
-    "ANDON": 8,
-    "UNIT_DEPART": 9,
-    "INSPECTION_RESULT": 10,
+    "CYCLE_END": 2,
+    "PROCESS_VALUE": 3,
+    "MANUAL_CHECK": 4,
+    "ANDON": 5,
+    "UNIT_DEPART": 6,
+    "INSPECTION_RESULT": 7,
+    "UNIT_ARRIVE": 8,
+    "PART_LOT_SCAN": 9,
+    "CYCLE_START": 10,
     "STATION_STATE": 11,
 }
 

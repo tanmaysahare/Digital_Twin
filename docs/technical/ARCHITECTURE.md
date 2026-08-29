@@ -272,7 +272,8 @@ Detail in ../quality/ERROR_HANDLING.md.
 
 | Decision | Reason | What we gave up |
 |---|---|---|
-| SimPy for the DES rather than a commercial engine | Free, scriptable, embeddable in the service, adequate fidelity for flow | Validated engine, 3D, vendor support |
+| SimPy for the plant simulator rather than a commercial engine | Free, scriptable, embeddable, adequate fidelity for flow | Validated engine, 3D, vendor support |
+| A hand-written tandem-line recursion for the forecaster rather than SimPy | SimPy runs about 1,300 station visits a second, and 200 replications of a 120 minute horizon is about 1.2 million: fifteen minutes against a 20 second budget. The recursion is the standard blocking-after-service formulation and is exact for the same model. Measured, not assumed, and recorded in TECHNICAL_SPEC.md Section 5.1 | A second implementation to keep correct, which is also why the simulator keeps SimPy: the two disagreeing is a signal |
 | Two engines (DES for consequence, active period for attribution) | Each answers a different question, and both are explainable to an industrial engineer | Simplicity |
 | LightGBM rather than a sequence model | Better at this data scale, handles missingness natively, explains itself through SHAP | Possible accuracy on long-range temporal patterns |
 | Conformal intervals rather than a Bayesian model | Distribution-free coverage under severe class imbalance, cheap to compute | Richer uncertainty decomposition |

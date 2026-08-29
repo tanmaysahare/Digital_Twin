@@ -599,6 +599,82 @@ class StateEstimator:
             basis=station.basis,
         )
 
+    def units_between(self, upstream_id: str, downstream_id: str) -> int:
+        """How many units are between two stations, by unit conservation.
+
+        The count that left the upstream station less the count that reached the
+        downstream one. Exact wherever both flanking sources are complete, which
+        is what lets the twin say how many units are inside a dark run even
+        though not one of the stations there emits anything.
+        """
+        return max(0, self._departed[upstream_id] - self._arrived[downstream_id])
+
+    def link_occupancy(self) -> tuple[int, ...]:
+        """How many units sit on the link feeding each station, in line order.
+
+        Unit conservation, with one complication. Between two instrumented
+        stations the count that left one less the count that reached the other is
+        exact. Across a dark run there is no arrival scan at all, so the same
+        subtraction across a single link would count every unit that has ever
+        entered the run. What conservation gives there is the number of units
+        inside the whole span, and where they sit inside it is exactly what the
+        twin cannot know (STA-07). The span's units are spread over its links,
+        oldest first, and the forecast seed records that this placement is an
+        assumption rather than an observation.
+
+        Index 0 is the release point, which holds nothing the twin can see.
+        """
+        levels = [0] * len(self._order)
+        for index in range(1, len(self._order)):
+            upstream = self._order[index - 1]
+            here = self._order[index]
+            if (
+                self._stations[upstream].definition.tier != "C"
+                and self._stations[here].definition.tier != "C"
+            ):
+                levels[index] = self.units_between(upstream, here)
+        for span in self._spans:
+            if span.upstream_id is None or span.downstream_id is None:
+                continue
+            inside = self.units_between(span.upstream_id, span.downstream_id)
+            first = self._index_of[span.dark_station_ids[0]]
+            last = self._index_of[span.dark_station_ids[-1]] + 1
+            for position, link in enumerate(range(first, last + 1)):
+                # One unit per link across the span, front to back. A span
+                # holding more units than it has links is a span whose flanking
+                # scans disagree, and the excess is dropped rather than piled on
+                # to a link that cannot hold it.
+                levels[link] = 1 if position < inside else 0
+        return tuple(levels)
+
+    def holding(self) -> dict[str, tuple[str, datetime]]:
+        """Which stations hold a unit right now, and since when.
+
+        A dark station is absent: nothing says when a unit reached it, which is
+        why the forecast seeds the dark run from its link occupancy instead.
+        """
+        found: dict[str, tuple[str, datetime]] = {}
+        for station_id, station in self._stations.items():
+            if station.current_unit_id is not None and station.arrived_at is not None:
+                found[station_id] = (station.current_unit_id, station.arrived_at)
+        return found
+
+    def variant_of(self, unit_id: str) -> str:
+        """One unit's model variant, or an empty string if it is not known."""
+        unit = self._units.get(unit_id)
+        return unit.variant_id if unit is not None else ""
+
+    def recent_variants(self, count: int) -> tuple[str, ...]:
+        """The variants of the last units released, in the order they arrived.
+
+        The upcoming mix in the prototype is the recent mix. A site with an MES
+        schedule reads the schedule instead, and INTEGRATIONS.md carries that
+        design; inventing a schedule here would make the forecast look better
+        than the data supports.
+        """
+        recent = [unit.variant_id for unit in self._units.values()][-count:]
+        return tuple(item for item in recent if item)
+
     def _buffer(self, buffer_id: str) -> BufferSnapshot:
         """One buffer's level, from unit conservation across it.
 

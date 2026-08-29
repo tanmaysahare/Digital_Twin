@@ -216,24 +216,33 @@ class Scenario:
     injections: tuple[Injection, ...]
 
     def cycle_scale(self, station_id: str, at_s: float) -> float:
-        """How much a station's cycle time is multiplied at this instant."""
+        """How much a station's cycle time is multiplied at this instant.
+
+        A ramp holds at its target once it has finished. `ends_at_s` on a
+        `cycle_drift` says when the ramp stops climbing, not when the wear
+        stops existing: a worn fixture stays worn until somebody replaces it.
+        Reverting at the end of the window made SC-01 a fault that healed
+        itself after 90 minutes, and a scenario whose consequence disappears
+        before a 120 minute forecast horizon closes cannot be forecast at all.
+        """
         scale = 1.0
         for injection in self.injections:
-            if injection.station_id != station_id or not injection.covers(at_s):
+            if injection.station_id != station_id or at_s < injection.starts_at_s:
                 continue
             start = injection.parameters.get("from_cycle_s")
             target = injection.parameters.get("to_cycle_s")
             if start is None or target is None:
                 continue
             if injection.mechanism == "cycle_step":
+                if not injection.covers(at_s):
+                    continue
                 scale *= target / start
             elif injection.mechanism == "cycle_drift":
-                # A ramp, because a fixture wears rather than steps. Linear is
-                # the honest default: the shape of real wear is unknown and a
-                # curve here would be a claim we cannot support.
+                # Linear is the honest default: the shape of real wear is
+                # unknown and a curve here would be a claim we cannot support.
                 assert injection.ends_at_s is not None
                 span = injection.ends_at_s - injection.starts_at_s
-                progress = (at_s - injection.starts_at_s) / span
+                progress = min(1.0, (at_s - injection.starts_at_s) / span)
                 scale *= (start + (target - start) * progress) / start
         return scale
 

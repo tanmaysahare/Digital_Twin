@@ -211,30 +211,35 @@ class LineSimulation:
         }
         self._links = self._build_links()
 
-        self._rng = {
-            station.station_id: generator_for(
-                request.seed, "station", station.station_id
-            )
-            for station in self._line.stations
-        }
         self._env_rng = generator_for(request.seed, "environment")
-        # One generator per link, so that a transport draw depends only on how
-        # many units have crossed that link. A shared generator would make every
-        # transport time depend on the order the whole line happened to run in,
-        # and a scenario run would then differ from its control everywhere
-        # rather than only where it was injected.
-        self._transport_rng = [
-            generator_for(request.seed, "transport", index)
-            for index in range(len(self._line.stations))
-        ]
-        self._gate_rng = {
-            gate.gate_id: generator_for(request.seed, "gate", gate.gate_id)
-            for gate in self._line.gates
-        }
         self._lot_quality: dict[str, float] = {}
         self._humidity: dict[str, float] = {}
         self._temperature: dict[str, float] = {}
         self._completed = 0
+
+    # -- randomness ------------------------------------------------------
+
+    def _draw_for(self, *parts: object) -> np.random.Generator:
+        """A generator keyed on what the draw is about, not on a running stream.
+
+        Every stochastic quantity in this model is a property of one unit at one
+        place: this unit's cycle time at this station, this unit's transport
+        across this link, this unit's verdict at this gate. Seeding on that
+        identity rather than on a per-station sequence is what makes a scenario
+        run comparable with its control.
+
+        With a sequential stream per station the comparison silently fails. A
+        unit scrapped at G2 in one run and not the other shifts every subsequent
+        draw at every station past S26, and the two runs then differ everywhere
+        downstream of the divergence rather than only where the scenario was
+        injected. Measured on SC-01 against its control, that showed as changed
+        cycle times at seventeen stations when only S20 had been touched. Keyed
+        on the unit, the same comparison changes exactly S20.
+
+        This is the same reasoning the transport generators already carried, now
+        applied to every draw rather than to one of them.
+        """
+        return generator_for(self._request.seed, *parts)
 
     # -- construction ----------------------------------------------------
 
@@ -301,7 +306,10 @@ class LineSimulation:
         link = self._links[index]
         if link.transport_s > 0:
             yield from self._elapse(
-                self._transport(self._transport_rng[index], link.transport_s)
+                self._transport(
+                    self._draw_for("transport", index, unit.unit_id, unit.seq),
+                    link.transport_s,
+                )
             )
         unit.ready_at_s = float(self._env.now)
         yield link.ready.put(unit)
@@ -457,9 +465,14 @@ class LineSimulation:
         """One station: take a unit, work on it, hand it on."""
         station = self._line.stations[index]
         station_id = station.station_id
-        rng = self._rng[station_id]
         inbound = self._links[index]
-        free_at = 0.0
+        # None until this station has handed a unit on. A station waiting for
+        # the first unit of the run is not starved: the line has not started.
+        # Recording that wait as starvation put a 20 minute stop in the ground
+        # truth of every station on every run, which is the line fill walking
+        # down the line, and it swamped every genuine stop the evaluation is
+        # meant to count.
+        free_at: float | None = None
 
         while True:
             unit = cast("Unit", (yield inbound.ready.get()))
@@ -471,11 +484,20 @@ class LineSimulation:
                 unit.ready_at_s, float(self._env.now)
             )
             self._record_buffer(index)
-            starved_s = self._calendar.production_between(free_at, float(self._env.now))
-            if starved_s > 0 and self._detail.station_state:
+            starved_s = (
+                0.0
+                if free_at is None
+                else self._calendar.production_between(free_at, float(self._env.now))
+            )
+            if starved_s > 0 and free_at is not None and self._detail.station_state:
                 self._emit_state(station_id, free_at, "STARVED")
             arrived_at = float(self._env.now)
             unit.seq += 1
+            # One generator for this unit's whole visit to this station. The
+            # visit sequence is part of the key, so a unit that comes back
+            # through a rework loop draws a fresh cycle rather than repeating
+            # the one that sent it to the loop.
+            rng = self._draw_for("station", station_id, unit.unit_id, unit.seq)
             self._emit_arrival(station_id, unit, arrived_at)
 
             if self._detail.station_state:
@@ -734,7 +756,7 @@ class LineSimulation:
             causes["prior rework"] = defects.rework_odds_multiplier
 
         probability = odds / (1.0 + odds)
-        rng = self._gate_rng[gate_id]
+        rng = self._draw_for("gate", gate_id, unit.unit_id, unit.rework_passes)
         failed = bool(rng.random() < probability)
         defect_class = None
         if failed:

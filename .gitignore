@@ -35,3 +35,6 @@ plantsim/recordings/*.csv
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Tooling caches
+.serena/
