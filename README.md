@@ -3,160 +3,220 @@
 **Team Aeronomics** · Accenture Innovation Challenge 2026 · Problem Statement 4 · Round 2
 Tanmay Sahare, Anuj Kumar Gupta, Sanchit Arora · IIT Kanpur
 
----
-
-> **The build is in progress. This file is a skeleton.**
-> Task T-140 in `docs/ai/TASKS.md` replaces it with the public, judge-facing README
-> once the prototype is built. Until then it describes what is in this repository,
-> what runs today, and how to use it. The section order required of the final README
-> is in `docs/human-design/CONTENT_STYLE_GUIDELINES.md` Section 7.
-
----
-
-## What DigitalTwin.ai is
-
-A live, read-only digital twin of a mixed-model vehicle assembly line that runs the next
+A live, read-only digital twin of a mixed-model vehicle assembly line. It runs the next
 two hours before the line does, using only the data the plant already emits, and hands
 each stakeholder the one decision that changes the outcome.
 
-Three things it does:
+It never writes to a control system. Every output is advisory, and the boundary is
+structural rather than a policy: the interface a source is read through has three
+methods and none of them writes.
 
-- **Mirror.** Reconstructs the line as a live state model from cycle timestamps the PLCs
-  already publish and build records MES already writes. No new plant hardware on day one.
-- **Foresee.** Every two minutes, rolls the line forward 120 minutes as a Monte Carlo
-  discrete-event simulation, while a separate constraint detector attributes the cause.
-  In parallel, scores every in-process unit for the risk of failing each downstream
-  inspection gate, on the process signature it actually received.
-- **Act.** A supervisor tests a fix against the live state and gets an answer in seconds:
-  units recovered per shift, with an uncertainty band, compared against doing nothing.
+---
 
-And one thing it refuses: it never writes to a control system. Every output is advisory.
-
-## The two ideas that make it different
+## The two ideas the whole product serves
 
 **Uneven sensor coverage is the problem, not an inconvenience.** Six of the 42 stations
 on the reference line emit no machine data at all. The twin infers their behaviour from
-unit conservation through flanking timestamps, reports a bound rather than a number, says
-plainly what it cannot separate, and turns each blind spot into a costed, window-aware
-sensor recommendation. The instrumentation roadmap is an output of the product, generated
-from evidence.
+unit conservation through flanking timestamps, reports a bound rather than a number,
+says plainly what it cannot separate, and turns each blind spot into a costed,
+window-aware sensor recommendation. Over 73,670 station cycles the derived interval
+contains the simulator's ground truth in 100 percent of cycles, against a 90 percent
+target; over 14,734 span passages it is 99.8 percent. Five of the six dark stations sit
+in a row with no scan between them, so the twin reports their total and marks each of
+them `UNRESOLVED` rather than inventing a share for any one. S42 is dark and last, has
+no downstream scan at all, and gets no number of any kind.
 
 **False alarms are the failure mode.** A supervisor who learns to ignore this system has
 correctly concluded it is not worth reading, and no later accuracy improvement recovers
 that. So every prediction is written to an append-only ledger at the moment it is made,
-outcomes are joined automatically when the horizon elapses, and a predictor shows nothing
-on the floor until it has cleared a precision and recall gate for that specific station.
-When its accuracy degrades, it withdraws itself and says so. The scorecard is visible to
-the floor, including where the system is wrong.
+before any decision about whether to show it; outcomes are joined automatically when the
+horizon elapses; and a predictor shows nothing on the floor until it has cleared a
+precision and recall gate for that specific station.
 
-## What is in this repository right now
+On this line, no predictor has cleared its gate. The interface therefore says "nothing
+needs attention" with the count of forecasts held in shadow beside it. That is the
+product working rather than the screen failing, and the next section says why.
 
-```
-CLAUDE.md               Project instructions for Claude Code
-KICKOFF_PROMPT.md       The prompt to start the build, plus per-phase prompts
-RESEARCH_SOURCES.md     121 sources, each marked read or surfaced, mapped to decisions
-docs/                   The specification set. Start at docs/README.md
-  product/              Vision, PRD, MVP scope, personas, stories, flows, competitive, research
-  design/               UX spec, design system, visual direction, components, responsive,
-                        accessibility, generated reference sheets, eight wireframes
-  technical/            Architecture, technical spec, database schema, API spec,
-                        security requirements, integrations
-  ai/                   Implementation plan, 112 ordered tasks, coding standards,
-                        agent workflow
-  quality/              Acceptance criteria, test plan, edge cases, error handling,
-                        definition of done
-  human-design/         The binding design and writing rules
-```
+---
 
-Thirty-six specification documents plus four generated reference sheets and eight
-wireframes.
+## What the evidence says
 
-## What runs today
+Every number here comes from `evaluation/metrics.json`, regenerated by `make evaluate`
+over 8 scenarios at 3 seeds, 620 units each, 40 replications, a 120 minute horizon and a
+5 minute cadence. Nothing below is rounded in our favour.
 
-Phases 0 and 1 of `docs/ai/TASKS.md`.
+| Measure | Target (PRD Section 5) | Measured | Meets it |
+|---|---|---|---|
+| Dark-station interval coverage, per station | 0.90 | 1.000 | Yes |
+| Dark-span interval coverage | 0.90 | 0.998 | Yes |
+| Stall forecast precision | 0.60 | 0.250 | **No** |
+| Stall forecast median lead time | 15 min | 5 min | **No** |
+| Stall forecast recall | 0.50 | 0.190 | **No** |
+| Drift detection recall | 0.80 | 1.000 | Yes |
+| Drift detection precision | not set | 0.281 | |
+| False alerts per shift on a quiet line | under 1.0 | 0.70 | Yes |
+| Defect model calibration error, G1 | 0.05 | 0.005 | Yes |
+| Defect model calibration error, G3 | 0.05 | 0.002 | Yes |
+| Conformal coverage at alpha 0.10, G1 | 0.90 | 0.983 | Yes |
+| Conformal coverage at alpha 0.10, G3 | 0.90 | 0.976 | Yes |
+| Defect risk lead time, G3 | 10 stations | 13 stations | Yes |
 
-Phase 0 is the repository skeleton, continuous integration, the five-service Docker
-Compose stack, the design tokens, the lint suite, the database schema with its separate
-truth schema, and the two line configurations.
+**The stall forecaster does not meet its gate, and we are not going to dress that up.**
+The events it is scored against on this line are dominated by the tail of the repair-time
+distribution. A drifting station roughly doubles their frequency but does not schedule
+one, so a forecast seeded from the current state can raise the probability of a stall in
+a region and a window and cannot pinpoint one 20 to 40 minutes ahead. What the twin can
+say on this line, and does say correctly, is which station has become the constraint and
+what the line will lose because of it. `evaluation/report.md` Section 10 has the full
+diagnosis, and `docs/ai/TASKS.md` records the seven findings that came out of measuring
+it.
 
-Phase 1 is the line and the twin's view of it. The SimPy simulator runs 42 stations,
-nine buffers, three variants, two shifts, three inspection gates and two rework loops,
-and eight scenarios inject into it from a file rather than from code. Its output passes
-through an observability filter that throws away everything six of the stations would
-have said, and what survives is what the twin sees. The twin reconstructs the line
-state from that filtered stream, bounds the cycle time at every station no sensor
-watches, and says plainly which of them it cannot separate at all.
+The consequence is visible in the product rather than hidden by it: because the gate
+does not pass, the stall forecaster stays in shadow, and the floor sees nothing from it.
+That is the trust ledger doing exactly what it was built to do.
 
-The headline number: over 5,000 cycles, the derived interval at a dark station contains
-the simulator's ground truth in about 97 percent of cycles against a 90 percent target.
-The five stations that sit in a row with no scan between them are reported as
-`UNRESOLVED`, with the scan point that would fix them, and no cycle time is invented for
-any of them. S42 is dark and last, so it has no downstream scan at all and gets no
-number of any kind.
+**82 percent of stall predictions are unscoreable.** A prediction whose horizon had not
+closed when the run ended, or that named a station nothing watches, cannot be checked,
+and the harness counts it separately rather than scoring it as wrong. The precision above
+is over the 132 that could be scored.
 
-No forecast, no defect model, no views yet. Those are Phases 2 to 4.
+---
+
+## Running it
 
 ```
 make            list every command
 make install    install Python and Node development dependencies
 make lint       design rules, ruff, mypy strict, eslint, stylelint
 make test       the test suite
-make seed       rebuild the seeded demo database
 make up         start the stack
+make evaluate   regenerate the evidence pack
 ```
 
-On Windows without `make` installed, use `.\make.cmd <command>`. The commands are
-identical: both delegate to `tools/tasks.py`.
+On Windows without `make`, use `.\make.cmd <command>`. Both delegate to
+`tools/tasks.py`, so the steps are identical on Windows, macOS and Linux.
 
-The non-Docker path is in `docs/technical/RUNNING.md`.
+Without Docker, two processes:
 
-## How to use it
+```
+python -m uvicorn twin.api.main:app --port 8000
+cd web && npm run build && npm start
+```
 
-1. Read `docs/README.md`, which gives the reading order.
-2. Copy this whole tree into the repository root of
-   `github.com/tanmaysahare/Digital_Twin`, commit and push. The specification set is a
-   deliverable in its own right: if the build stalls, the repository still shows a
-   complete solution design.
-3. Open Claude Code in the repository root so it picks up `CLAUDE.md`.
-4. Paste the kickoff prompt from `KICKOFF_PROMPT.md`.
-5. Work through `docs/ai/TASKS.md` in order, one task at a time.
+The API simulates the line once at start-up and then replays it at 60x, so the first
+request takes about a minute while the twin builds its baselines. `GET /health` reports
+`WARMING` until it is ready, and the interface says the same thing in words rather than
+showing a spinner. Every part of that is reported on screen: the scenario, the seed, the
+speed and how far behind the twin is running.
 
-## What gets built
+Environment variables, all optional: `TWIN_LINE`, `TWIN_SCENARIO`, `TWIN_SEED`,
+`TWIN_UNITS`, `TWIN_SPEED`, `TWIN_REPLICATIONS`, `TWIN_HORIZON_MIN`, `TWIN_CADENCE_S`.
+`NEXT_PUBLIC_API_BASE` points the web application at the API.
 
-A five-service local stack: a SimPy simulator of a 42-station mixed-model line, a
-read-only connector, the twin service, a Next.js application with three views, and an
-offline evaluation harness that produces the evidence pack.
+The full non-Docker path is in `docs/technical/RUNNING.md`.
 
-The demo, in one paragraph: a quiet shift where the system says nothing. Then a fixture
-starts wearing at S20 and cycle time drifts from 58 to 63 seconds, inside spec, invisible
-to any threshold alarm. Twelve minutes later the drift is flagged. Three minutes after
-that a forecast appears: line stop at S22, between 09:52 and 10:04, probability 0.71,
-caused by S20, eleven units at risk, 27 minutes of lead time. The supervisor tests two
-fixes and takes the better one. Separately, six VINs carrying a suspect part lot are
-flagged fourteen stations before final QC. When the first one fails, the twin traces
-backwards and returns a containment list of twenty-three units. A dark station shows an
-interval and a forty-dollar sensor that would close it. Then the evaluation report, where
-every number just claimed can be checked.
+---
 
-Full script in `docs/product/MVP_SCOPE.md` Section 1.
+## The three views
+
+**Line view** is the supervisor's screen and the default. Forty-two stations across the
+top at their live cycle times, buffers beneath, the forecast track above, and below it
+the ranked actions, the units at risk, output against pace, the predictor record and
+source health. Fixed viewport, no page scroll, readable at three metres.
+
+**Plan view** is the plant manager's. Where the constraint has been over time as a
+greyscale heatmap, the loss Pareto under a reconciliation line, buffer and staffing
+changes with their modelled effect and their assumptions, the sensor investment queue
+ranked by modelled value and exportable as a CSV for a capital request, and the full
+predictor scorecard including the rows that are in shadow. It prints on A4 landscape.
+
+**Program view** is the programme lead's. Site readiness scored from what each site
+emits rather than from a survey, the business case with every assumption carrying its
+source and its uncertainty and a mandatory sensitivity ranking, modelled against realised,
+and what topology discovery can and cannot read off a stream.
+
+Screenshots of all three, captured from the running application against the running API,
+are in `docs/design/SCREENSHOTS/`.
+
+---
+
+## For a controls engineer
+
+The question you will ask first is whether this can touch the line. It cannot, and here
+is where to check rather than take our word for it.
+
+`connector/protocol.py` defines `SourceAdapter`. It has exactly three methods:
+`describe`, `stream` and `health`. `WRITE_VERBS` in the same file lists the verbs that
+would indicate a path back into the plant, and a test in `tests/test_adapters.py` walks
+every implementation in the repository and fails if any of them defines a method whose
+name starts with one. There is no fourth method, no escape hatch, and no configuration
+that adds one.
+
+The API has no endpoint that applies anything. The counterfactual sandbox produces a
+comparison and, if a supervisor asks, a record that they chose an option; the response
+says in those words that nothing was sent to the line.
+
+The twin reads a simulator here. Against a plant it would read a historian, an OPC UA
+server or an MQTT broker, all subscribe-only. Four of the six adapters in
+`docs/technical/INTEGRATIONS.md` are specified and not built, and that document says so
+per adapter.
+
+On clock skew: the connector estimates the offset between sources from hand-off
+timestamps and reports it. Where it exceeds the line's own tolerance, a derived cycle
+time at a hand-off is the skew rather than the station, and the twin says so instead of
+publishing the number.
+
+---
+
+## What is in the repository
+
+```
+config/         LineDefinition, SourceMapping, the sensor catalogue. No plant value in code
+plantsim/       The SimPy line and the eight scenarios
+connector/      Source adapters, read-only by protocol, and the normaliser
+twin/           state, forecast, defect, retro, ledger, sensors, counterfactual, program, api
+web/            The Next.js application
+evaluation/     The harness and the generated evidence pack
+tests/          The test suite
+docs/           The specification set. Start at docs/README.md
+```
+
+A test asserts that no station identifier, buffer capacity or threshold from either line
+appears in the source tree. A second line, `config/lines/line7.yaml`, is structurally
+different and runs with no code change.
+
+---
 
 ## Honest notes
 
-- **All data is simulated.** We have no access to a real plant. The problem statement
-  permits illustrative data, and the interface carries a non-removable simulated-data
-  marker so no screenshot can be mistaken for plant results.
+- **All data is simulated.** We have no access to a real plant. The interface carries a
+  non-removable simulated-data marker so no screenshot can be mistaken for plant results.
+- **The evaluation evaluates our simulator against our twin, both written by us.** That
+  is a real limitation and `evaluation/report.md` states it in its own words.
 - **No primary user research.** No supervisor, plant manager or controls engineer was
   interviewed. The personas are composites built from published literature and are
   labelled as such in `docs/product/USER_RESEARCH.md`, which also lists the seven things
   we do not know.
 - **One of 121 sources was read in full.** The rest were surfaced and verified through
-  search. That is stated at the top of `RESEARCH_SOURCES.md`, and it is why almost every
-  number in these documents is either measured by our own harness or labelled as an
-  assumption.
-- **Four of the six integration adapters are specified but not built.** Every document
-  that mentions them says so.
-- **The evaluation evaluates our simulator against our twin, both written by us.** That
-  is a real limitation and the evaluation report states it in its own words.
+  search. Almost every number in these documents is either measured by our own harness
+  or labelled as an assumption, and `RESEARCH_SOURCES.md` says which.
+- **Sensor costs are our assumptions, not quotations.** Every Sensor Value Card carries
+  the sentence that says so.
+- **The modelled business case computes to zero** because the reference line supplies no
+  contribution margin per unit. That is deliberate: a plant that has not given us its own
+  figure sees zero rather than an industry average that does not describe it.
+- **The loss reconciliation can disagree with itself**, and on some windows it does, by
+  up to about 8 percent of the production time available. Both sides are computed from
+  different evidence on purpose, and the difference is shown rather than distributed
+  across the causes to make them add up. Where the causes exceed the time available, two
+  of them are being counted over the same seconds somewhere and the twin has not
+  established where.
+- **Four of the six integration adapters are specified but not built.**
+- **The persona switcher in the header is a demonstration affordance**, not
+  authentication. There is no authentication in the prototype, and
+  `docs/technical/SECURITY_REQUIREMENTS.md` Section 6 says what else is missing.
+
+---
 
 ## Licence
 

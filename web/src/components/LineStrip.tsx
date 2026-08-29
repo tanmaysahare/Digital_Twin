@@ -19,14 +19,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RangePlot } from '@/components/primitives';
 import { estimateShort, clockShort } from '@/lib/format';
-import type {
-  Buffer,
-  Forecast,
-  Gate,
-  LineState,
-  Station,
-  Zone,
-} from '@/lib/types';
+import type { Buffer, Forecast, Gate, LineState, Station, Zone } from '@/lib/types';
 
 // The strip's own geometry, from UX_SPEC.md Section 2.2.
 const TRACK_HEIGHT = 40;
@@ -41,7 +34,11 @@ function fillFor(station: Station): { background: string; ink: string } {
   if (station.flags.includes('DRIFTING')) {
     return { background: 'var(--state-drift)', ink: 'var(--ink)' };
   }
-  if (station.state === 'BLOCKED' || station.state === 'STARVED') {
+  // Only past the threshold. A station under takt waits a few seconds on every
+  // cycle by construction, and colouring that would put saturation on most of
+  // the line most of the time, which is the one thing the colour rule exists to
+  // prevent.
+  if (station.losing && (station.state === 'BLOCKED' || station.state === 'STARVED')) {
     return { background: 'var(--state-blocked)', ink: 'var(--ink)' };
   }
   return { background: 'transparent', ink: 'var(--ink-2)' };
@@ -53,6 +50,7 @@ function fillFor(station: Station): { background: string; ink: string } {
 function patternFor(station: Station): string | null {
   if (station.tier === 'C') return 'hatch';
   if (station.flags.includes('DRIFTING')) return 'diagonal';
+  if (!station.losing) return null;
   if (station.state === 'BLOCKED') return 'vertical';
   if (station.state === 'STARVED') return 'horizontal';
   return null;
@@ -69,14 +67,7 @@ function StripPatterns() {
           patternTransform="rotate(45)"
           patternUnits="userSpaceOnUse"
         >
-          <line
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="6"
-            stroke="var(--state-dark)"
-            strokeWidth="3"
-          />
+          <line x1="0" y1="0" x2="0" y2="6" stroke="var(--state-dark)" strokeWidth="3" />
         </pattern>
         <pattern
           id="strip-diagonal"
@@ -87,20 +78,10 @@ function StripPatterns() {
         >
           <line x1="0" y1="0" x2="0" y2="6" stroke="var(--ink)" strokeWidth="1" />
         </pattern>
-        <pattern
-          id="strip-vertical"
-          width="5"
-          height="5"
-          patternUnits="userSpaceOnUse"
-        >
+        <pattern id="strip-vertical" width="5" height="5" patternUnits="userSpaceOnUse">
           <line x1="0" y1="0" x2="0" y2="5" stroke="var(--ink)" strokeWidth="1" />
         </pattern>
-        <pattern
-          id="strip-horizontal"
-          width="5"
-          height="5"
-          patternUnits="userSpaceOnUse"
-        >
+        <pattern id="strip-horizontal" width="5" height="5" patternUnits="userSpaceOnUse">
           <line x1="0" y1="0" x2="5" y2="0" stroke="var(--ink)" strokeWidth="1" />
         </pattern>
       </defs>
@@ -145,7 +126,7 @@ function StationSegment({
       onClick={() => onSelect(station.station_id)}
       title={label}
       aria-label={label}
-      className={`relative flex min-w-0 flex-1 flex-col justify-between border-r border-rule px-1 py-1 text-left last:border-r-0 ${
+      className={`relative flex min-w-0 flex-1 flex-col justify-between overflow-hidden border-r border-rule py-1 text-left last:border-r-0 ${
         selected ? 'outline outline-2 outline-accent' : ''
       }`}
       style={{
@@ -169,7 +150,7 @@ function StationSegment({
           />
         </svg>
       ) : null}
-      <span className="numeral relative z-10 text-micro">
+      <span className="numeral relative z-10 px-[2px] text-micro">
         {station.station_id}
       </span>
       <span className="relative z-10 block">
@@ -179,7 +160,11 @@ function StationSegment({
           height={34}
         />
       </span>
-      <span className="numeral relative z-10 block truncate text-micro">
+      <span
+        className={`numeral relative z-10 block px-[2px] leading-[12px] ${
+          isDark ? 'text-[10px]' : 'text-micro'
+        }`}
+      >
         {estimateShort(station.cycle_time)}
       </span>
     </button>
@@ -188,8 +173,7 @@ function StationSegment({
 
 function BufferBlock({ buffer }: { buffer: Buffer }) {
   const share = Math.min(1, buffer.occupancy.hi / Math.max(1, buffer.capacity));
-  const trend =
-    buffer.trend === 'RISING' ? '↑' : buffer.trend === 'FALLING' ? '↓' : '–';
+  const trend = buffer.trend === 'RISING' ? '↑' : buffer.trend === 'FALLING' ? '↓' : '–';
   return (
     <div
       className="flex flex-col items-center gap-1"
@@ -218,11 +202,8 @@ function ForecastTrack({
 }): JSX.Element | null {
   if (!forecast || forecast.buckets.length === 0) {
     return (
-      <div
-        className="flex items-center border-b border-rule px-2 text-small text-ink-3"
-        style={{ height: TRACK_HEIGHT }}
-      >
-        Next 120 min: no forecast cycle has run yet.
+      <div className="flex h-[44px] items-center border-b border-rule px-2 text-small text-ink-3">
+        Next 120 min. No forecast cycle has run yet.
       </div>
     );
   }
@@ -244,44 +225,48 @@ function ForecastTrack({
     .slice(0, 3);
   const ticks = buckets.filter((_, index) => index % 3 === 0);
   return (
-    <div
-      className="relative border-b border-rule"
-      style={{ height: TRACK_HEIGHT }}
-    >
-      <span className="absolute left-2 top-1 text-small text-ink-3">
-        Next {forecast.horizon_min.toFixed(0)} min
-      </span>
-      {raised.map((item, row) => {
-        const bucket = buckets[item.index];
-        if (!bucket) return null;
-        const left =
-          ((new Date(bucket.start_at).getTime() - start) / span) * 100;
-        const width =
-          ((new Date(bucket.end_at).getTime() -
-            new Date(bucket.start_at).getTime()) /
-            span) *
-          100;
-        return (
-          <div
-            key={item.station_id}
-            className="absolute flex items-center gap-2"
-            style={{ left: `${left}%`, top: 2 + row * 11 }}
-          >
-            <span
-              className="block h-[3px]"
-              style={{
-                width: `${Math.max(12, width * 4)}px`,
-                background: 'var(--state-forecast)',
-              }}
-            />
-            <span className="numeral whitespace-nowrap text-micro text-ink-2">
-              {item.station_id} p {item.peak.toFixed(2)}{' '}
-              {clockShort(bucket.start_at)} to {clockShort(bucket.end_at)}
-            </span>
-          </div>
-        );
-      })}
-      <div className="absolute inset-x-0 bottom-0 flex justify-between px-2">
+    <div className="border-b border-rule px-2 py-1">
+      <div className="flex items-baseline justify-between">
+        <span className="text-small text-ink-3">
+          Next {forecast.horizon_min.toFixed(0)} min
+        </span>
+        {raised.length === 0 ? (
+          <span className="text-small text-ink-3">
+            No station reaches a stall probability worth marking.
+          </span>
+        ) : null}
+      </div>
+      <div className="relative" style={{ height: TRACK_HEIGHT - 4 }}>
+        {raised.map((item, row) => {
+          const bucket = buckets[item.index];
+          if (!bucket) return null;
+          const left = ((new Date(bucket.start_at).getTime() - start) / span) * 100;
+          const width =
+            ((new Date(bucket.end_at).getTime() - new Date(bucket.start_at).getTime()) /
+              span) *
+            100;
+          return (
+            <div
+              key={item.station_id}
+              className="absolute flex items-center gap-2"
+              style={{ left: `${Math.min(70, left)}%`, top: row * 12 }}
+            >
+              <span
+                className="block h-[3px]"
+                style={{
+                  width: `${Math.max(12, width * 4)}px`,
+                  background: 'var(--state-forecast)',
+                }}
+              />
+              <span className="numeral whitespace-nowrap text-micro text-ink-2">
+                {item.station_id} p {item.peak.toFixed(2)} {clockShort(bucket.start_at)}{' '}
+                to {clockShort(bucket.end_at)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-between">
         {ticks.map((bucket, index) => (
           <span key={bucket.index} className="numeral text-micro text-ink-4">
             +{index * 15}
@@ -304,17 +289,12 @@ function ZoneRule({
 }) {
   const order = stations.map((item) => item.station_id);
   return (
-    <div
-      className="flex border-t border-rule-strong"
-      style={{ height: ZONE_HEIGHT }}
-    >
+    <div className="flex border-t border-rule-strong" style={{ height: ZONE_HEIGHT }}>
       {zones.map((zone) => {
         const from = order.indexOf(zone.from_station_id);
         const to = order.indexOf(zone.to_station_id);
         const count = Math.max(1, to - from + 1);
-        const gate = gates.find(
-          (item) => item.after_station_id === zone.to_station_id,
-        );
+        const gate = gates.find((item) => item.after_station_id === zone.to_station_id);
         return (
           <div
             key={zone.zone_id}
@@ -382,10 +362,7 @@ export function LineStrip({
   }, [stations]);
 
   return (
-    <section
-      aria-label="Line strip"
-      className="border border-rule bg-paper-raised"
-    >
+    <section aria-label="Line strip" className="border border-rule bg-paper-raised">
       <StripPatterns />
       <ForecastTrack forecast={forecast} stations={stations} />
       <div

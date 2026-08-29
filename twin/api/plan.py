@@ -225,7 +225,10 @@ def recommendations(context: Ctx, line_id: str) -> RecommendationsOut:
     result = context.sandbox.run(
         seed,
         tuple(option for option, _ in candidates),
-        RunRequest(run_id=str(uuid4())),
+        RunRequest(
+            run_id=str(uuid4()),
+            replications=context.twin.settings.replications,
+        ),
     )
     modelled = {item.label: item for item in result.options}
     rows: list[RecommendationOut] = []

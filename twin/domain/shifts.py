@@ -165,6 +165,27 @@ class ProductionCalendar:
         """Whether the line is running at this instant."""
         return self.window_at(seconds) is not None
 
+    def shift_started_at(self, seconds: float) -> float | None:
+        """When the shift containing this instant began.
+
+        `window_at` answers with the production window, which is the stretch
+        since the last break. That is the right answer for arithmetic about
+        production time and the wrong one for a shift's output: a supervisor
+        judged on 460 units a shift is not judged on the units built since the
+        last tea break.
+        """
+        self._ensure(seconds)
+        index = self._index_at_or_before(seconds)
+        if index < 0:
+            return None
+        window = self._windows[index]
+        if seconds >= window.end_s:
+            return None
+        shift_id = window.shift_id
+        while index > 0 and self._windows[index - 1].shift_id == shift_id:
+            index -= 1
+        return self._windows[index].start_s
+
     def shift_at(self, seconds: float) -> str | None:
         """Which shift is running at this instant, or None if the line is stopped."""
         window = self.window_at(seconds)

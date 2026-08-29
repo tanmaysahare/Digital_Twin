@@ -127,9 +127,12 @@ def station_out(
     zones: dict[str, str],
     normal: RangeOut | None,
     drifting: frozenset[str],
+    lost_s: float,
+    threshold_s: float,
 ) -> StationOut:
     """One station's live row, with its flags in the order the strip reads them."""
     snapshot = state.station(station_id)
+    losing = lost_s > threshold_s
     flags: list[str] = []
     if snapshot.tier == "C":
         flags.append("NO_MACHINE_DATA")
@@ -137,7 +140,9 @@ def station_out(
         flags.append("UNRESOLVED")
     if station_id in drifting:
         flags.append("DRIFTING")
-    if snapshot.state in {"BLOCKED", "STARVED", "DOWN"}:
+    if snapshot.state == "DOWN":
+        flags.append("DOWN")
+    elif losing and snapshot.state in {"BLOCKED", "STARVED"}:
         flags.append(snapshot.state)
     return StationOut(
         station_id=station_id,
@@ -154,6 +159,8 @@ def station_out(
         ),
         normal_range=normal,
         observed_cycles=snapshot.observed_cycles,
+        lost_s=round(lost_s, 1),
+        losing=losing,
         flags=flags,
         basis=snapshot.basis,
     )
@@ -298,6 +305,8 @@ def line_state_out(
     replay: ReplayOut,
     normals: dict[str, RangeOut | None],
     drifting: frozenset[str],
+    lost: dict[str, float],
+    threshold_s: float,
     age_s: float,
 ) -> LineStateOut:
     """The whole live state in one response."""
@@ -315,6 +324,8 @@ def line_state_out(
                 zones,
                 normals.get(station.station_id),
                 drifting,
+                lost.get(station.station_id, 0.0),
+                threshold_s,
             )
             for station in line.stations
         ],

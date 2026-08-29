@@ -45,30 +45,6 @@ from twin.domain.shifts import ProductionCalendar
 CAUSES = ("blocked", "starved", "down", "changeover", "quality")
 
 
-def _clipped(
-    start: datetime,
-    end: datetime,
-    seconds: float,
-    from_at: datetime,
-    to_at: datetime,
-) -> float:
-    """The part of one period that falls inside a window.
-
-    Pro rata over the period's own span rather than recomputed from the
-    calendar, because the calendar call is the expensive one and a period
-    that straddles a break is rare enough that the difference is smaller
-    than the rounding the interface shows.
-    """
-    lo = max(start, from_at)
-    hi = min(end, to_at)
-    if hi <= lo:
-        return 0.0
-    span = (end - start).total_seconds()
-    if span <= 0.0:
-        return seconds
-    return seconds * ((hi - lo).total_seconds() / span)
-
-
 @dataclass(frozen=True)
 class LossSplit:
     """Lost production time over one window, by cause, with what is unexplained."""
@@ -79,6 +55,10 @@ class LossSplit:
     # What the line's own pace says was lost over the window, which is the
     # figure the split is reconciled against.
     implied_total_min: float
+    # Production time the window held, across every station. The denominator
+    # for the unexplained share: measuring the gap against the gap it is part of
+    # made a small difference look enormous whenever the window was quiet.
+    available_min: float
     per_station_min: dict[str, dict[str, float]]
 
     @property
@@ -93,19 +73,43 @@ class LossSplit:
 
     @property
     def unexplained_share(self) -> float:
-        """The unexplained part as a share of the implied total."""
-        if self.implied_total_min <= 0.0:
+        """The unexplained part as a share of the production time available."""
+        if self.available_min <= 0.0:
             return 0.0
-        return self.unexplained_min / self.implied_total_min
+        return self.unexplained_min / self.available_min
 
     def reconciliation(self) -> str:
-        """The sentence UX_SPEC.md Section 3.3 requires under the Pareto."""
+        """The sentence UX_SPEC.md Section 3.3 requires under the Pareto.
+
+        The two sides can disagree in either direction and the sentence says
+        which. A positive gap is time the twin could not attribute to a cause,
+        which on this line is mostly the stations that emit nothing. A negative
+        gap means the causes add to more than the production time available,
+        which is a measurement problem in the twin rather than a fact about the
+        line, and saying so is more use than hiding it.
+        """
+        gap = self.unexplained_min
+        share = abs(self.unexplained_share) * 100
+        if gap >= 0:
+            tail = (
+                "which nothing accounts for. Most of it is at the stations that "
+                "emit neither a cycle time nor the timestamps blocked and "
+                "starved are measured between."
+            )
+        else:
+            tail = (
+                "by which the causes exceed the production time the window "
+                "held. Two of them are being counted over the same seconds "
+                "somewhere and the twin has not established where, so the "
+                "difference is shown rather than trimmed to make the two sides "
+                "agree."
+            )
         return (
             f"Sum of causes {self.accounted_min:,.0f} station min. Production "
-            f"time not worked {self.implied_total_min:,.0f} station min. "
-            f"Unexplained {self.unexplained_min:,.0f} min "
-            f"({abs(self.unexplained_share) * 100:.1f} percent), most of it at "
-            f"the stations that emit nothing."
+            f"time not worked {self.implied_total_min:,.0f} station min, out of "
+            f"{self.available_min:,.0f} available. Difference "
+            f"{abs(gap):,.0f} min ({share:.1f} percent of the time available), "
+            f"{tail}"
         )
 
 
@@ -241,7 +245,7 @@ class LossLedger:
         per_station: dict[str, dict[str, float]] = {}
         for (cause, station_id), entries in self._seconds.items():
             total = sum(
-                _clipped(start, end, seconds, from_at, to_at)
+                self._inside(start, end, seconds, from_at, to_at)
                 for start, end, seconds in entries
             )
             if total <= 0.0:
@@ -254,8 +258,51 @@ class LossLedger:
             to_at=to_at,
             minutes=minutes,
             implied_total_min=self._implied(from_at, to_at),
+            available_min=self._available(from_at, to_at) / 60.0,
             per_station_min=per_station,
         )
+
+    def _inside(
+        self,
+        start: datetime,
+        end: datetime,
+        seconds: float,
+        from_at: datetime,
+        to_at: datetime,
+    ) -> float:
+        """How much of one period's lost production time falls in a window.
+
+        A period wholly inside the window counts in full and a period wholly
+        outside counts for nothing, which is almost all of them and costs
+        nothing to decide. Only a period that straddles an edge goes back to the
+        calendar, and there is at most one of those per cause per station.
+
+        Pro rating by the period's own span instead was wrong in the one case
+        that matters: a stoppage running through a changeover has a long span
+        and very little production time in it, and pro rating credited the
+        window with more lost production than the window contained. On a Line
+        view window that opens at a shift start, that put the sum of causes
+        above the production time available and the reconciliation went
+        negative for a reason that was arithmetic rather than evidence.
+        """
+        if end < from_at or start > to_at:
+            return 0.0
+        if start >= from_at and end <= to_at:
+            return seconds
+        epoch = self.calendar.epoch
+        lo = max(start, from_at)
+        hi = min(end, to_at)
+        return self.calendar.production_between(
+            (lo - epoch).total_seconds(), (hi - epoch).total_seconds()
+        )
+
+    def _available(self, from_at: datetime, to_at: datetime) -> float:
+        """Production seconds the window held, across every station."""
+        epoch = self.calendar.epoch
+        producing = self.calendar.production_between(
+            (from_at - epoch).total_seconds(), (to_at - epoch).total_seconds()
+        )
+        return producing * len(self.line.stations)
 
     def _implied(self, from_at: datetime, to_at: datetime) -> float:
         """What the line's own pace says the window should have lost.
@@ -270,13 +317,8 @@ class LossLedger:
         one can disagree, and where it does the difference is reported as
         unexplained rather than distributed to make the causes add up.
         """
-        epoch = self.calendar.epoch
-        producing = self.calendar.production_between(
-            (from_at - epoch).total_seconds(), (to_at - epoch).total_seconds()
-        )
-        available = producing * len(self.line.stations)
         worked = sum(seconds for at, seconds in self._worked if from_at <= at <= to_at)
-        return max(0.0, available - worked) / 60.0
+        return max(0.0, self._available(from_at, to_at) - worked) / 60.0
 
     def dark_share(self) -> float:
         """What share of the line emits nothing, which is where the gap comes from.

@@ -3,7 +3,7 @@
 **Purpose:** the ordered task list. Work through it in order. Each task states its dependencies, the acceptance criteria it satisfies, and how it is verified.
 **Convention:** `T-nnn`. Dependencies are hard: do not start a task whose dependencies are open.
 **Sizing:** S is under 2 hours, M is half a day, L is a full day.
-**Last updated:** 2026-08-28
+**Last updated:** 2026-08-29
 
 ---
 
@@ -226,6 +226,47 @@ specification, the configuration or the simulator rather than only the code.
 
 **Phase 3 exit:** demo script steps 1 to 9 run end to end without a terminal.
 
+**Closed.** The three views run against the live API with no fixture data anywhere.
+Five findings are recorded because each changed a specification or a component rather
+than only the code.
+
+1. **The strip coloured a station the moment it was blocked or starved, which painted
+   half the line.** The state word is not the signal. On a paced line a station under
+   takt waits a few seconds on every cycle by construction, so the instantaneous state
+   is abnormal on twenty stations at once and there is nothing left for a genuinely
+   abnormal one to stand out against, which is the whole of the colour rule in
+   HUMAN_DESIGN_GUIDELINES.md Section 4. `StationOut` now carries `lost_s` and
+   `losing`, and the strip colours on the second: the station has lost more production
+   in the current five-minute bucket than the line's own stall threshold allows.
+
+2. **The lead time is the only `--text-display` element and on this line it is often
+   absent**, because the stall forecaster has not cleared its gate at any station and
+   no stall forecast is published. `ActionCard` therefore renders the drift variant as
+   well, which carries no window and no probability of a stop because the drift
+   detector claims neither. Without it the action region could only ever be empty, and
+   the second card in WIREFRAMES/01 would have no implementation.
+
+3. **The loss reconciliation tied by construction and told a reader nothing.** Both
+   sides were computed from the same evidence. The implied total now comes from
+   production time against work recorded, independently of the causes, and the two are
+   allowed to disagree. On some windows they do, by up to about 8 percent of the time
+   available, and the sentence says which direction and that the twin has not
+   established where the overlap is. UX_SPEC.md Section 3.3 required the line; it did
+   not require it to be sound, and a line that always ties is decoration.
+
+4. **A loss period was credited in full to whichever window it ended in.** A stoppage
+   running through a changeover has a long span and very little production time in it,
+   and pro rating by span put the sum of causes above the production time the window
+   held. Periods are now clipped by production time, and only a period straddling an
+   edge goes back to the calendar.
+
+5. **The eslint rule banning inline style cannot be satisfied as written.** It permits
+   inline style for a value computed at runtime and asks for a per-line disable after
+   review, and ESLint cannot carry a disable comment inside a JSX attribute list. The
+   five components that draw geometry are named in an overrides block with the review
+   written out; every other file stays covered, and a design rule independently asserts
+   that no style in any of them carries a colour literal.
+
 ---
 
 ## Phase 4: Plan and Program views
@@ -250,6 +291,25 @@ specification, the configuration or the simulator rather than only the code.
 
 **Phase 4 exit:** demo script steps 10 and 11 run, no panel is a placeholder.
 
+**Closed.** Every region on both views reads a real endpoint. Three findings:
+
+6. **Plan view's recommendation table ran the line's configured 200 replications
+   against three options and took most of a minute.** It now runs at the count the live
+   forecaster uses and lets the engine's own budget reduce it further, which is the same
+   mechanism the sandbox uses and states.
+
+7. **Site readiness cannot be a single number.** A site with no stream connected scores
+   zero on four of six components, and reporting that as a low score would say the site
+   is bad when what is true is that nothing has been measured. Each component carries
+   its own `missing` sentence, a site with no stream says so in its note, and the band
+   is a word.
+
+8. **The business case computes to zero on this line and that is the correct output.**
+   `unit_value_usd` is zero in `config/lines/line2.yaml` because no plant has supplied a
+   contribution margin. The model reports zero and names the assumption rather than
+   substituting an industry figure, and the sensitivity table still ranks what the
+   result would be most sensitive to.
+
 ---
 
 ## Phase 5: Evidence, hardening, submission
@@ -271,6 +331,22 @@ specification, the configuration or the simulator rather than only the code.
 | T-142 | Demo video, 3 to 4 minutes | L | T-140 | Follows the script order, including the shadow-mode moment |
 | T-143 | Business proposal assembled from the documents | L | T-131 | All six Round 2 elements present |
 | T-144 | Final `DEFINITION_OF_DONE.md` Section 3 pass | M | Everything | Every box |
+
+**Phase 5 status.** T-130 to T-134 and T-136 to T-141 are done: the evaluation runs and
+its numbers are reconciled into the README one by one, the screenshots are captured from
+the running application against the running API rather than staged, the edge cases the
+new modules introduced have tests, and the error messages on every new surface are
+sentences rather than codes.
+
+Three tasks are not done and are named rather than quietly dropped:
+
+- **T-135, manual accessibility.** The keyboard paths, the focus trap, the roving
+  tabindex and the contrast pairings are implemented and the automated checks pass. A
+  screen reader pass and a 3 m legibility check need a person and a room, and neither
+  has happened.
+- **T-142, the demo video.** Not recorded.
+- **T-143, the business proposal document.** The material for all six Round 2 elements
+  is in `docs/`, and it has not been assembled into one document.
 
 ---
 

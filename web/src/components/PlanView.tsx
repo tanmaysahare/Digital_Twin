@@ -19,13 +19,7 @@ import { SensorValueCard } from '@/components/SensorValueCard';
 import { Button, Notice, Select, StateChip, Value } from '@/components/primitives';
 import { ExportLink, Region } from '@/components/frame';
 import { api, exportUrls } from '@/lib/api';
-import {
-  causeWords,
-  clock,
-  dayAndClock,
-  money,
-  probability,
-} from '@/lib/format';
+import { causeWords, clock, dayAndClock, money, probability } from '@/lib/format';
 import type {
   ConstraintMigration,
   LossPareto,
@@ -48,8 +42,7 @@ export function PlanView({ lineId }: { lineId: string | null }) {
   const [hours, setHours] = useState('8');
   const [migration, setMigration] = useState<ConstraintMigration | null>(null);
   const [pareto, setPareto] = useState<LossPareto | null>(null);
-  const [recommendations, setRecommendations] =
-    useState<Recommendations | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendations | null>(null);
   const [sensors, setSensors] = useState<SensorRecommendations | null>(null);
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -96,40 +89,34 @@ export function PlanView({ lineId }: { lineId: string | null }) {
   }
 
   const cellFor = (station: string, period: string) =>
-    migration?.cells.find(
-      (cell) => cell.station_id === station && cell.period === period,
-    )?.share ?? 0;
+    migration?.cells.find((cell) => cell.station_id === station && cell.period === period)
+      ?.share ?? 0;
 
   return (
     <div className="print-full-width flex flex-col gap-12 px-6 py-6">
-      <div className="flex flex-wrap items-end gap-6">
+      <div className="flex flex-col gap-3">
         <h1>Plan</h1>
-        <Select
-          label="Range"
-          value={hours}
-          options={RANGES}
-          onChange={setHours}
-        />
-        <span className="text-small text-ink-3">
-          {pareto
-            ? `${dayAndClock(pareto.from_at)} to ${dayAndClock(pareto.to_at)}`
-            : ''}
-        </span>
+        <div className="flex flex-wrap items-end gap-6">
+          <Select label="Range" value={hours} options={RANGES} onChange={setHours} />
+          <span className="text-small text-ink-3">
+            {pareto
+              ? `${dayAndClock(pareto.from_at)} to ${dayAndClock(pareto.to_at)}`
+              : ''}
+          </span>
+        </div>
       </div>
 
       {problem ? <Notice tone="attention">{problem}</Notice> : null}
-      {loading ? (
-        <p className="text-small text-ink-3">Reading the ledger.</p>
-      ) : null}
+      {loading ? <p className="text-small text-ink-3">Reading the ledger.</p> : null}
 
       <Region
         title="Constraint migration"
         aside={migration?.current_constraint ?? undefined}
       >
         <p className="max-w-[68ch] text-body text-ink-2">
-          Which station has been holding the line back, and whether it stays in
-          one place. A constraint that moves every hour is a different problem
-          from one that does not.
+          Which station has been holding the line back, and whether it stays in one place.
+          A constraint that moves every hour is a different problem from one that does
+          not.
         </p>
         {migration ? (
           <>
@@ -147,7 +134,9 @@ export function PlanView({ lineId }: { lineId: string | null }) {
       <Region
         title="Loss Pareto"
         aside={
-          pareto ? <ExportLink href={exportUrls.loss(lineId, Number(hours))}>Export</ExportLink> : undefined
+          pareto ? (
+            <ExportLink href={exportUrls.loss(lineId, Number(hours))}>Export</ExportLink>
+          ) : undefined
         }
       >
         {pareto ? (
@@ -183,15 +172,13 @@ export function PlanView({ lineId }: { lineId: string | null }) {
               ]}
               rows={pareto.rows}
             />
-            <p className="max-w-[68ch] text-body text-ink-2">
-              {pareto.reconciliation}
-            </p>
+            <p className="max-w-[68ch] text-body text-ink-2">{pareto.reconciliation}</p>
             <p className="max-w-[68ch] text-small text-ink-3">
-              The two sides of that line are computed independently: the causes
-              from timestamps at instrumented stations, the total from production
-              time against work recorded. They are allowed to disagree, and where
-              they do the difference is shown rather than spread across the
-              causes to make them add up.
+              The two sides of that line are computed independently: the causes from
+              timestamps at instrumented stations, the total from production time against
+              work recorded. They are allowed to disagree, and where they do the
+              difference is shown rather than spread across the causes to make them add
+              up.
             </p>
           </>
         ) : null}
@@ -200,8 +187,8 @@ export function PlanView({ lineId }: { lineId: string | null }) {
       <Region title="Buffer and staffing recommendations">
         <p className="max-w-[68ch] text-body text-ink-2">
           Each row is modelled against doing nothing on shared replications. The
-          assumptions are inline because a modelled effect whose assumption is
-          hidden is a number nobody can argue with.
+          assumptions are inline because a modelled effect whose assumption is hidden is a
+          number nobody can argue with.
         </p>
         {recommendations ? (
           <>
@@ -218,9 +205,7 @@ export function PlanView({ lineId }: { lineId: string | null }) {
                   key: 'effect',
                   header: 'Modelled effect',
                   numeric: true,
-                  render: (row) => (
-                    <Value estimate={row.modelled_effect} digits={0} />
-                  ),
+                  render: (row) => <Value estimate={row.modelled_effect} digits={0} />,
                 },
                 {
                   key: 'assumptions',
@@ -249,9 +234,8 @@ export function PlanView({ lineId }: { lineId: string | null }) {
         }
       >
         <p className="max-w-[68ch] text-body text-ink-2">
-          Every blind spot on this line, ranked by what closing it is modelled to
-          be worth. Costs are indicative and each row says whose assumption it
-          is.
+          Every blind spot on this line, ranked by what closing it is modelled to be
+          worth. Costs are indicative and each row says whose assumption it is.
         </p>
         {sensors ? (
           <>
@@ -266,9 +250,7 @@ export function PlanView({ lineId }: { lineId: string | null }) {
                 {
                   key: 'station',
                   header: 'Station',
-                  render: (row) => (
-                    <span className="numeral">{row.station_id}</span>
-                  ),
+                  render: (row) => <span className="numeral">{row.station_id}</span>,
                 },
                 {
                   key: 'unknown',
@@ -293,8 +275,7 @@ export function PlanView({ lineId }: { lineId: string | null }) {
                   key: 'cost',
                   header: 'Indicative cost',
                   numeric: true,
-                  render: (row) =>
-                    money(row.indicative_cost_usd, sensors.currency),
+                  render: (row) => money(row.indicative_cost_usd, sensors.currency),
                 },
                 {
                   key: 'effort',
@@ -305,9 +286,7 @@ export function PlanView({ lineId }: { lineId: string | null }) {
                 {
                   key: 'window',
                   header: 'Next window',
-                  render: (row) => (
-                    <span className="text-small">{row.next_window}</span>
-                  ),
+                  render: (row) => <span className="text-small">{row.next_window}</span>,
                 },
                 {
                   key: 'value',
@@ -340,9 +319,9 @@ export function PlanView({ lineId }: { lineId: string | null }) {
 
       <Region title="Predictor scorecard">
         <p className="max-w-[68ch] text-body text-ink-2">
-          Every predictor at every station. A row in shadow shows its progress
-          towards the gate rather than a hit rate, and a demoted row says when it
-          was withdrawn and why.
+          Every predictor at every station. A row in shadow shows its progress towards the
+          gate rather than a hit rate, and a demoted row says when it was withdrawn and
+          why.
         </p>
         {scorecard ? (
           <>
@@ -410,9 +389,7 @@ export function PlanView({ lineId }: { lineId: string | null }) {
                   header: 'False per shift',
                   numeric: true,
                   render: (row) =>
-                    row.false_per_shift === null
-                      ? ''
-                      : row.false_per_shift.toFixed(2),
+                    row.false_per_shift === null ? '' : row.false_per_shift.toFixed(2),
                 },
                 {
                   key: 'changed',
@@ -428,10 +405,9 @@ export function PlanView({ lineId }: { lineId: string | null }) {
               rows={[...scorecard.totals, ...scorecard.rows]}
             />
             <p className="text-small text-ink-3">
-              Window {scorecard.window_days} days. A shadow row returns no
-              precision even where one could be computed, because an unpromoted
-              hit rate invites the floor to trust something that has not cleared
-              its gate.
+              Window {scorecard.window_days} days. A shadow row returns no precision even
+              where one could be computed, because an unpromoted hit rate invites the
+              floor to trust something that has not cleared its gate.
             </p>
           </>
         ) : null}

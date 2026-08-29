@@ -67,6 +67,8 @@ export interface Station {
   cycle_time: Estimate | null;
   normal_range: Range | null;
   observed_cycles: number;
+  lost_s: number;
+  losing: boolean;
   flags: string[];
   basis: string;
 }
@@ -123,6 +125,7 @@ export interface Loss {
   minutes: Record<string, number>;
   accounted_min: number;
   implied_total_min: number;
+  available_min: number;
   unexplained_min: number;
   unexplained_share: number;
   reconciliation: string;

@@ -116,6 +116,14 @@ class StationOut(BaseModel):
     cycle_time: EstimateOut | None
     normal_range: RangeOut | None
     observed_cycles: int
+    # Production seconds this station has lost in the current five-minute
+    # bucket, and whether that is past the line's stall threshold. The strip
+    # colours on the second of these rather than on the state word: a station
+    # on a paced line is blocked or starved for a few seconds on every cycle by
+    # construction, and colouring that would paint most of the line most of the
+    # time and leave nothing for an abnormal station to stand out against.
+    lost_s: float
+    losing: bool
     flags: list[str]
     basis: str
 

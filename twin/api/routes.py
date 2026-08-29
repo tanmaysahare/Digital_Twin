@@ -18,7 +18,7 @@ import csv
 import io
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -159,6 +159,13 @@ def line_state(context: Ctx, line_id: str) -> LineStateOut:
             replay=serialise.replay_out(status),
             normals=context.normal_ranges(),
             drifting=drifting,
+            lost={
+                station.station_id: pipeline.observed.lost_s(
+                    station.station_id, state.at
+                )
+                for station in context.line.stations
+            },
+            threshold_s=context.line.forecast.stall_threshold_s,
             age_s=status.behind_s,
         )
 
@@ -170,7 +177,11 @@ def _shift_window(context: Context, at: datetime) -> tuple[datetime | None, str 
     window = calendar.window_at(seconds)
     if window is None:
         return None, None
-    return calendar.at(window.start_s), window.shift_id
+    started = calendar.shift_started_at(seconds)
+    return (
+        calendar.at(started if started is not None else window.start_s),
+        window.shift_id,
+    )
 
 
 @router.get("/lines/{line_id}/forecast", response_model=ForecastOut)
@@ -330,7 +341,14 @@ def station_detail(context: Ctx, line_id: str, station_id: str) -> StationDetail
         normals = context.normal_ranges()
         drifting = frozenset(item.station_id for item in pipeline.drift.drifting())
         station = serialise.station_out(
-            station_id, state, context.line, zones, normals.get(station_id), drifting
+            station_id,
+            state,
+            context.line,
+            zones,
+            normals.get(station_id),
+            drifting,
+            pipeline.observed.lost_s(station_id, state.at),
+            context.line.forecast.stall_threshold_s,
         )
         markers: list[MarkerOut] = []
         drift = pipeline.drift.active(station_id)
@@ -785,6 +803,9 @@ def sensor_queue(context: Context) -> tuple[SensorRecommendation, ...]:
     with context.reading() as twin:
         pipeline = twin.pipeline
         state = pipeline.estimator.state()
+        cached = context.cached_queue(state.at)
+        if cached is not None:
+            return cast("tuple[SensorRecommendation, ...]", cached)
         cycles = pipeline.cycles
         counts: dict[str, int] = {}
         for cycle in cycles:
@@ -798,9 +819,11 @@ def sensor_queue(context: Context) -> tuple[SensorRecommendation, ...]:
         criticality = context.sensors.criticality(
             Counter(counts), len(cycles), dark_visit_share(signatures)
         )
-        return context.sensors.recommend(
+        rows = context.sensors.recommend(
             observability, criticality, expected_unit_loss=loss, at=state.at
         )
+        context.cache_queue(state.at, rows)
+        return rows
 
 
 def _card(item: SensorRecommendation) -> SensorCardOut:

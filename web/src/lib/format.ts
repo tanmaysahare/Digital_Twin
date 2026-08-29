@@ -32,7 +32,9 @@ export function estimateText(estimate: Estimate | null, digits = 1): string {
 // The short form the line strip uses, where 42 of them sit side by side and
 // there is room for about seven characters.
 export function estimateShort(estimate: Estimate | null): string {
-  if (estimate === null) return NO_DATA;
+  // On the strip there is room for about five characters. A station with no
+  // value at all takes a dash, and the drawer says why.
+  if (estimate === null) return '–';
   if (estimate.provenance === 'MEASURED' || estimate.lo === estimate.hi) {
     return estimate.lo.toFixed(1);
   }

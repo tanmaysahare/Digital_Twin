@@ -58,6 +58,8 @@ class Context:
     tracer: RetroTracer = field(init=False)
     sandbox: CounterfactualEngine = field(init=False)
     decisions: list[Decision] = field(default_factory=list)
+    # The sensor queue, keyed on the state timestamp it was computed from.
+    _queue: tuple[datetime, tuple[object, ...]] | None = field(default=None, repr=False)
     interventions: list[dict[str, object]] = field(default_factory=list)
     traces: dict[str, RetroTrace] = field(default_factory=dict)
     _guard: threading.Lock = field(default_factory=threading.Lock, repr=False)
@@ -78,6 +80,18 @@ class Context:
         """Hold the replay still for the length of one response."""
         with self.twin.lock:
             yield self.twin
+
+    def cached_queue(self, at: datetime) -> tuple[object, ...] | None:
+        """The sensor queue computed at this instant, if it still holds."""
+        with self._guard:
+            if self._queue is not None and self._queue[0] == at:
+                return self._queue[1]
+        return None
+
+    def cache_queue(self, at: datetime, rows: tuple[object, ...]) -> None:
+        """Keep the sensor queue against the state it was computed from."""
+        with self._guard:
+            self._queue = (at, rows)
 
     def record_decision(self, decision: Decision) -> None:
         """Keep a chosen option, so its effect can join the ledger later."""
