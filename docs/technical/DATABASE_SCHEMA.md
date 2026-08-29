@@ -26,7 +26,8 @@
 
   schema truth              (no grant to the application role)
   ------------
-  scenario_injection
+  scenario_injection        station_visit      gate_result
+  unit_outcome              buffer_occupancy
 ```
 
 Everything plant-specific is in `config` and is loaded from YAML, so the same schema
@@ -342,8 +343,47 @@ truth schema exists.
 for a line-level scenario), `injected_at`, `ends_at` (nullable), `mechanism`,
 `parameters jsonb`.
 
-Further truth tables arrive with the simulator at T-024. Every one of them lives
-in this schema.
+### `station_visit` (schema `truth`)
+
+What one unit's visit to one station really consisted of. `cycle_time_s` is the
+answer the virtual sensors are graded against, and `blocked_s` with
+`queued_before_s` is the answer the attribution is graded against. Blocking is a
+station waiting to hand its unit on; queueing is the unit waiting to be picked
+up; the two together are the whole of the non-work time inside a span.
+
+`visit_id` PK, `run_id`, `line_id`, `unit_id`, `station_id`, `seq`,
+`variant_id`, `shift_id`, `arrived_at`, `work_ended_at`, `departed_at`,
+`cycle_time_s`, `blocked_s`, `queued_before_s`, `starved_before_s`, `down_s`,
+`is_dark`.
+
+`cycle_time_s` includes any repair that interrupted the work. Failures are
+operation-dependent, so a station cannot fail while it is idle, and the twin
+cannot separate a slow dark station from a briefly broken one. Defining truth
+this way says so rather than holding the twin to a distinction it has no
+evidence for.
+
+### `unit_outcome` (schema `truth`)
+
+One unit's life on the line. `(run_id, unit_id)` PK, `line_id`, `variant_id`,
+`released_at`, `completed_at`, `status`, `rework_passes`, `lots`.
+
+### `gate_result` (schema `truth`)
+
+One inspection verdict and the causes that produced it. `result_id` PK,
+`run_id`, `line_id`, `unit_id`, `gate_id`, `at`, `passed`,
+`failure_probability`, `defect_class`, `cause_odds jsonb`.
+
+`cause_odds` carries each contributing factor and the odds multiplier it
+applied, so a retro-trace hypothesis is scored against what actually drove the
+failure rather than against a label.
+
+### `buffer_occupancy` (schema `truth`)
+
+`run_id`, `line_id`, `buffer_id`, `at`, `occupancy`. Recorded on change.
+
+All four are owned by `digitaltwin_truth`, and migration 0004 revokes every
+privilege on them from `digitaltwin_app` and from PUBLIC explicitly rather than
+relying on the absence of a grant.
 
 ---
 

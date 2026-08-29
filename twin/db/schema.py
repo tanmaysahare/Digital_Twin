@@ -594,6 +594,95 @@ scenario_injection = Table(
     schema=TRUTH_SCHEMA,
 )
 
+# What the simulator actually did, station by station and unit by unit. T-024.
+#
+# `cycle_time_s` here is the answer to the question the virtual sensors are
+# asked, and `queued_before_s` with `blocked_s` is the answer to the question
+# the attribution is asked. The application role has no grant on any of it.
+
+station_visit = Table(
+    "station_visit",
+    metadata,
+    Column("visit_id", UUID(as_uuid=True), primary_key=True),
+    Column("run_id", UUID(as_uuid=True), nullable=False),
+    Column("line_id", Text, nullable=False),
+    Column("unit_id", Text, nullable=False),
+    Column("station_id", Text, nullable=False),
+    Column("seq", Integer, nullable=False),
+    Column("variant_id", Text, nullable=False),
+    Column("shift_id", Text, nullable=True),
+    _timestamp("arrived_at"),
+    _timestamp("work_ended_at"),
+    _timestamp("departed_at"),
+    Column("cycle_time_s", Numeric, nullable=False),
+    Column("blocked_s", Numeric, nullable=False),
+    Column("queued_before_s", Numeric, nullable=False),
+    Column("starved_before_s", Numeric, nullable=False),
+    Column("down_s", Numeric, nullable=False),
+    Column("is_dark", Boolean, nullable=False),
+    Index("ix_station_visit_run_station", "run_id", "station_id"),
+    Index("ix_station_visit_run_unit", "run_id", "unit_id"),
+    schema=TRUTH_SCHEMA,
+)
+
+unit_outcome = Table(
+    "unit_outcome",
+    metadata,
+    Column("unit_id", Text, nullable=False),
+    Column("run_id", UUID(as_uuid=True), nullable=False),
+    Column("line_id", Text, nullable=False),
+    Column("variant_id", Text, nullable=False),
+    _timestamp("released_at"),
+    _timestamp("completed_at", nullable=True),
+    Column("status", Text, nullable=False),
+    Column("rework_passes", Integer, nullable=False),
+    Column("lots", ARRAY(Text), nullable=False),
+    PrimaryKeyConstraint("run_id", "unit_id"),
+    schema=TRUTH_SCHEMA,
+)
+
+gate_result = Table(
+    "gate_result",
+    metadata,
+    Column("result_id", UUID(as_uuid=True), primary_key=True),
+    Column("run_id", UUID(as_uuid=True), nullable=False),
+    Column("line_id", Text, nullable=False),
+    Column("unit_id", Text, nullable=False),
+    Column("gate_id", Text, nullable=False),
+    _timestamp("at"),
+    Column("passed", Boolean, nullable=False),
+    Column("failure_probability", Numeric, nullable=False),
+    Column("defect_class", Text, nullable=True),
+    # Each contributing cause and the odds multiplier it applied, so a
+    # retro-trace hypothesis is scored against what drove the failure rather
+    # than against a label.
+    Column("cause_odds", JSONB, nullable=False),
+    Index("ix_gate_result_run_gate", "run_id", "gate_id"),
+    schema=TRUTH_SCHEMA,
+)
+
+buffer_occupancy = Table(
+    "buffer_occupancy",
+    metadata,
+    Column("run_id", UUID(as_uuid=True), nullable=False),
+    Column("line_id", Text, nullable=False),
+    Column("buffer_id", Text, nullable=False),
+    _timestamp("at"),
+    Column("occupancy", Integer, nullable=False),
+    Index("ix_buffer_occupancy_run_buffer", "run_id", "buffer_id", "at"),
+    schema=TRUTH_SCHEMA,
+)
+
+# Every table in the truth schema, named once so the migration that grants
+# against them and the test that checks the grants cannot disagree.
+TRUTH_TABLES = (
+    "scenario_injection",
+    "station_visit",
+    "unit_outcome",
+    "gate_result",
+    "buffer_occupancy",
+)
+
 APPEND_ONLY_TABLES = ("prediction", "prediction_outcome")
 
 # Which table is partitioned on which column. The migration carries its own copy
