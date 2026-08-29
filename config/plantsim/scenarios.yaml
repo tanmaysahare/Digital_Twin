@@ -1,0 +1,125 @@
+# The scenario catalogue. PRD.md Section 6.
+#
+# Eight scenarios, and the null one matters as much as the seven faults. A
+# system that predicts stalls on a quiet shift is the system the problem
+# statement warns about, so SC-06 injects nothing and passing it is a result.
+#
+# Times are seconds from the run epoch, which for Line 2 is 06:00 on the first
+# simulated day. Every injection is recorded in the truth schema when the run
+# starts, which is what the evaluation harness joins the ledger against.
+#
+# Nothing here is in code. A scenario is a row in this file.
+
+scenarios:
+  - id: SC-01
+    line_id: line2
+    name: Fixture wear at S20
+    what_the_twin_should_do: >-
+      Detect the drift within 15 minutes of onset, forecast the S22 stall 20 to
+      40 minutes ahead, and attribute the cause to S20 rather than to S22.
+    injections:
+      - mechanism: cycle_drift
+        station_id: S20
+        starts_at_s: 7200.0
+        ends_at_s: 12600.0
+        # Inside the tolerance band a threshold alarm would watch the whole way,
+        # and over takt only at the end. This is the case a limit check cannot
+        # catch and a control chart can.
+        parameters: {from_cycle_s: 58.0, to_cycle_s: 63.0}
+
+  - id: SC-02
+    line_id: line2
+    name: Off-spec part lot at S07
+    what_the_twin_should_do: >-
+      Flag at-risk units before G3, and on the first G3 failure produce a
+      containment list that recovers the lot.
+    injections:
+      - mechanism: lot_defect
+        station_id: S07
+        gate_id: G3
+        lot_id: B-4471
+        starts_at_s: 0.0
+        parameters: {odds_multiplier: 5.0}
+
+  - id: SC-03
+    line_id: line2
+    name: Operator changeover at S31
+    what_the_twin_should_do: >-
+      Detect the variance shift, forecast the resulting starve downstream, and
+      recommend a floater.
+    injections:
+      - mechanism: variance_step
+        station_id: S31
+        # The start of the second shift, which is when the crew changes.
+        starts_at_s: 30600.0
+        ends_at_s: 33000.0
+        parameters: {variance_multiplier: 3.0}
+
+  - id: SC-04
+    line_id: line2
+    name: Paint humidity excursion
+    what_the_twin_should_do: >-
+      Raise defect risk at G2 for the affected units and attribute it to the
+      environmental feature rather than to a station.
+    injections:
+      - mechanism: humidity_excursion
+        zone_id: paint
+        starts_at_s: 10800.0
+        ends_at_s: 18000.0
+        parameters: {delta_pct: 12.0}
+
+  - id: SC-05
+    line_id: line2
+    name: Dark station degradation at S34
+    what_the_twin_should_do: >-
+      Detect it through the virtual sensor bound moving and the flanking buffer
+      behaviour, and emit a Sensor Value Card for S34. No sensor observes this
+      station, so nothing else in the system can see it at all.
+    injections:
+      - mechanism: cycle_step
+        station_id: S34
+        starts_at_s: 7200.0
+        parameters: {from_cycle_s: 49.0, to_cycle_s: 57.0}
+
+  - id: SC-06
+    line_id: line2
+    name: Quiet shift
+    what_the_twin_should_do: >-
+      Raise no stall alert. This is a pass condition, not the absence of one.
+    injections: []
+
+  - id: SC-07
+    line_id: line2
+    name: Source outage
+    what_the_twin_should_do: >-
+      Degrade confidence, warn on data health, continue forecasting on the
+      remaining sources, and fabricate nothing for the silent one.
+    injections:
+      - mechanism: source_outage
+        starts_at_s: 9000.0
+        ends_at_s: 9720.0
+        parameters: {}
+
+  - id: SC-08
+    line_id: line2
+    name: Concurrent faults
+    what_the_twin_should_do: >-
+      Rank the two and keep them apart. Merging them into one story is the
+      failure this scenario tests for.
+    includes: [SC-01, SC-03]
+    injections: []
+
+  # Line 7 carries one scenario, which is the one its topology exists to test:
+  # a slow-down at a dark station that sits alone between two instrumented ones,
+  # where the twin should produce a narrow interval rather than a wide one.
+  - id: SC-05
+    line_id: line7
+    name: Dark station degradation at W05
+    what_the_twin_should_do: >-
+      Detect it through the virtual sensor bound moving. W05 is separable, so
+      the interval should stay narrow and the shift should be unmistakable.
+    injections:
+      - mechanism: cycle_step
+        station_id: W05
+        starts_at_s: 7200.0
+        parameters: {from_cycle_s: 84.0, to_cycle_s: 94.0}
