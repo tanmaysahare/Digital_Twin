@@ -282,7 +282,10 @@ class GateModel:
             return np.full(len(rows), self._fallback)
         frame = self.frame(rows)
         raw = np.asarray(self.booster.predict(frame))  # type: ignore[attr-defined]
-        return np.clip(self.calibration.apply(raw), 0.0, 1.0)
+        # Bound to the unit interval and named, because np.clip is untyped here
+        # and returning it directly loses the array type at the boundary.
+        clipped: np.ndarray = np.clip(self.calibration.apply(raw), 0.0, 1.0)
+        return clipped
 
     def frame(self, rows: tuple[FeatureRow, ...]) -> object:
         """The rows as the booster wants them."""
