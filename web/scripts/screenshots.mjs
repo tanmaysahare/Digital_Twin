@@ -57,7 +57,7 @@ async function main() {
   const dark = page.locator('button[aria-label^="S34"]').first();
   if (await dark.count()) {
     await dark.click();
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(15000);
     await page.screenshot({ path: `${OUT}/06-station-drawer-dark.png` });
     process.stdout.write('06-station-drawer-dark captured\n');
     await page.keyboard.press('Escape');
@@ -84,7 +84,7 @@ async function main() {
   const row = page.locator('table tbody tr').first();
   if ((await row.count()) > 0) {
     await row.click();
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(15000);
     await page.screenshot({ path: `${OUT}/08-unit-drawer.png` });
     process.stdout.write('08-unit-drawer captured\n');
   } else {
