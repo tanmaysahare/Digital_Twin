@@ -59,7 +59,7 @@ from twin.api.schemas import (
 from twin.counterfactual.engine import Intervention, Option, RunRequest
 from twin.domain.state import BufferSnapshot, LineState, StationSnapshot
 from twin.forecast.attribution import ConstraintAttribution
-from twin.retro.trace import ContainedUnit, RetroTrace, to_csv
+from twin.retro.trace import SIMULATED, ContainedUnit, RetroTrace, to_csv
 from twin.sensors.value import SensorRecommendation, dark_visit_share
 
 router = APIRouter(prefix="/api/v1")
@@ -884,6 +884,7 @@ def sensor_recommendations_export(context: Ctx, line_id: str) -> Response:
     _line_or_404(context, line_id)
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([SIMULATED])
     writer.writerow(
         [
             "station",

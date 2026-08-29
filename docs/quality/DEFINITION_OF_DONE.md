@@ -66,39 +66,43 @@ without narration. It catches more than the automated checks do.
 
 This is the list that decides whether we are finished.
 
+**Status at the Round 2 cut, 2026-08-30.** A box is ticked only where the thing was
+checked rather than assumed. An unticked box carries the sentence saying why, because an
+unticked box with a reason is more use to a reader than a ticked one that is wrong.
+
 ### The prototype runs
-- [ ] A clean machine with Docker installed reaches the seeded demo in under 5 minutes with `docker compose up`
-- [ ] The demo script in ../product/MVP_SCOPE.md Section 1 runs end to end without touching a terminal
-- [ ] It runs with no network connection
-- [ ] It runs on Windows, macOS and Linux. Tested on all three, not assumed
-- [ ] A non-Docker path is documented and tested for the case where Docker is unavailable
-- [ ] `make evaluate` regenerates the evidence pack in under 30 minutes
+- [ ] A clean machine with Docker installed reaches the seeded demo in under 5 minutes with `docker compose up`. **Not verified in this pass.** The stack was run as two processes rather than through Compose
+- [x] The demo script in ../product/MVP_SCOPE.md Section 1 runs end to end without touching a terminal, with one difference: no stall forecast card appears, because the stall forecaster has not cleared its promotion gate at any station. The shadow-mode moment in step 9 is therefore the whole of steps 4 to 6 as well
+- [x] It runs with no network connection. A design rule fails the build on any reference to a host outside the deployment, and the application loads no external script, style or font
+- [ ] It runs on Windows, macOS and Linux. **Windows only.** Everything delegates to `tools/tasks.py` and there is no shell-specific step, but the other two were not run
+- [x] A non-Docker path is documented and tested for the case where Docker is unavailable. Tested on Windows
+- [ ] `make evaluate` regenerates the evidence pack in under 30 minutes. **It does not.** The last full run took about 40 minutes on this machine
 
 ### The prototype demonstrates the core mechanism
-- [ ] SC-01: bottleneck forecast with median lead time between 20 and 40 minutes, cause attributed to the drifting station rather than the stalling one
-- [ ] SC-02: at-risk units flagged at least 10 stations before the gate, and a containment list recalling at least 0.80 of affected units
-- [ ] SC-05: dark station handled with an interval and a Sensor Value Card
-- [ ] SC-06: at most one false stall alert per fault-free simulated shift
-- [ ] The counterfactual sandbox returns a ranked comparison in under 5 seconds
-- [ ] At least one predictor is visibly sitting in shadow mode during the demo
-- [ ] All three views are functional, none faked, no placeholder panels
+- [ ] SC-01: bottleneck forecast with median lead time between 20 and 40 minutes. **Median lead time is 5 minutes.** The cause is attributed correctly, to S20 rather than to the station that stalls; the lead time is not there and the README says so in its own table
+- [ ] SC-02: at-risk units flagged at least 10 stations before the gate, and a containment list recalling at least 0.80 of affected units. **Half.** Defect risk lead time is 13 stations at G3, measured. The containment recall of 0.80 is asserted by a unit test on constructed data and has not been measured on SC-02 itself
+- [x] SC-05: dark station handled with an interval and a Sensor Value Card. `docs/design/SCREENSHOTS/06-station-drawer-dark.png`
+- [x] SC-06: at most one false stall alert per fault-free simulated shift. Measured at 0.70
+- [x] The counterfactual sandbox returns a ranked comparison in under 5 seconds, and states the replication count and the runtime when it does not
+- [x] At least one predictor is visibly sitting in shadow mode during the demo. Every one of them is
+- [x] All three views are functional, none faked, no placeholder panels
 
 ### The evidence is checkable
-- [ ] Every quantitative claim in the README traces to a value in `evaluation/report.md`
-- [ ] The evaluation report includes the false alarm rate, the calibration curves, the lead-time distributions and the virtual sensor coverage
-- [ ] The evaluation report includes its own limitations section, in its own words
-- [ ] Seeds, configuration version and code version are recorded, and two runs produce identical numbers
-- [ ] Simulated data is labelled as simulated everywhere: the interface header, every screenshot, every export, the video
+- [x] Every quantitative claim in the README traces to a value in `evaluation/metrics.json`, checked one number at a time
+- [x] The evaluation report includes the false alarm rate, the calibration curves, the lead-time distributions and the virtual sensor coverage
+- [x] The evaluation report includes its own limitations section, in its own words
+- [x] Seeds, configuration version and code version are recorded, and two runs produce identical numbers
+- [x] Simulated data is labelled as simulated everywhere: the interface header, every screenshot, every export. Not the video, which does not exist
 
 ### The repository
-- [ ] Public at `github.com/tanmaysahare/Digital_Twin`
-- [ ] README follows the required structure in ../human-design/CONTENT_STYLE_GUIDELINES.md Section 7
-- [ ] README includes the "For your controls engineer" section from ../technical/SECURITY_REQUIREMENTS.md Section 9
-- [ ] README states plainly what is built and what is specified but not built
-- [ ] The full `docs/` specification set is committed
-- [ ] Licence file present
-- [ ] No secrets, no credentials, no `.env` committed. Verified by a scan of the full history, not just the head commit
-- [ ] CI passes on the default branch
+- [x] Public at `github.com/tanmaysahare/Digital_Twin`
+- [x] README follows the required structure in ../human-design/CONTENT_STYLE_GUIDELINES.md Section 7
+- [x] README includes the "For your controls engineer" section from ../technical/SECURITY_REQUIREMENTS.md Section 9
+- [x] README states plainly what is built and what is specified but not built
+- [x] The full `docs/` specification set is committed
+- [x] Licence file present
+- [x] No secrets, no credentials, no `.env` committed. Verified by a scan of the full history, not just the head commit. The only committed file of that shape is `.env.example`, whose first line says that no secret in it is real
+- [ ] CI passes on the default branch. **The work is on `master` and the default branch is `main`.** CI has not run against it
 
 ### The video
 - [ ] 3 to 4 minutes

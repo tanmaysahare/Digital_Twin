@@ -361,10 +361,20 @@ class RetroTracer:
         }
 
 
+# Every file that leaves the product says where its numbers came from. A CSV
+# that leaves without this is a CSV that can end up in a capital request looking
+# like plant data.
+SIMULATED = (
+    "Simulated data. Produced by the DigitalTwin.ai prototype against a "
+    "simulated line, not measured in a plant."
+)
+
+
 def to_csv(trace: RetroTrace) -> str:
     """The containment list as a CSV a quality engineer can work from. AC-028."""
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([SIMULATED])
     writer.writerow(
         [
             "unit_id",

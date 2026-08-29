@@ -55,6 +55,7 @@ from twin.forecast.attribution import ConstraintAttribution
 from twin.ledger.store import STALL_FORECASTER
 from twin.program import business_case
 from twin.program.readiness import SiteReadiness, StreamReading, measure, score
+from twin.retro.trace import SIMULATED
 from twin.sensors.value import SensorRecommendation
 from twin.state.losses import CAUSES
 from twin.topology.discover import InferredField, TopologyDiscoverer
@@ -558,6 +559,7 @@ def loss_pareto_export(
     result = loss_pareto(context, line_id, hours)
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([SIMULATED])
     writer.writerow(["cause", "minutes", "share of accounted"])
     for row in result.rows:
         writer.writerow([row.cause, f"{row.minutes:.1f}", f"{row.share:.3f}"])
