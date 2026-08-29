@@ -328,11 +328,14 @@ def check_raw_colour(path: Path, text: str) -> Iterator[Violation]:
         )
 
 
+# The NumPy branch requires a call. `np.random.Generator` as a type
+# annotation is how a function says it takes a seeded generator, and is not
+# itself a draw. The legacy call surface still matches.
 _UNSEEDED_RANDOM = re.compile(
     r"^\s*(?:import\s+random\b|from\s+random\s+import\b)"
     r"|(?<![\w.])random\.(?:random|randint|randrange|choice|choices|shuffle|sample"
     r"|uniform|gauss|normalvariate|expovariate|seed)\s*\("
-    r"|(?<![\w.])(?:np|numpy)\.random\.(?!default_rng\s*\()[a-zA-Z_]+"
+    r"|(?<![\w.])(?:np|numpy)\.random\.(?!default_rng\s*\()[a-zA-Z_]+\s*\("
     r"|default_rng\s*\(\s*\)",
     re.MULTILINE,
 )

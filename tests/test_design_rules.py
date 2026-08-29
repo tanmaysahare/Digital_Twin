@@ -173,3 +173,15 @@ def test_quoted_material_is_not_judged() -> None:
     path = REPO_ROOT / "docs" / "quoting.md"
     text = f'Do not write "a {A_BANNED_WORD} forecast". Write the hit rate instead.\n'
     assert scan_text(rules, path, text) == []
+
+
+def test_a_generator_annotation_is_not_a_draw() -> None:
+    """A function that declares it takes a seeded generator is doing it right."""
+    rules = build_rules(REPO_ROOT)
+    path = REPO_ROOT / "twin" / "forecast" / "draw.py"
+    text = (
+        "import numpy as np\n\n\n"
+        "def sample(rng: np." + "random.Generator) -> float:\n"
+        "    return float(rng.normal())\n"
+    )
+    assert scan_text(rules, path, text) == []
