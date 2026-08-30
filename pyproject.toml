@@ -129,7 +129,7 @@ warn_unreachable = true
 disallow_any_explicit = false
 
 [[tool.mypy.overrides]]
-module = ["simpy.*", "lightgbm.*", "shap.*", "sklearn.*"]
+module = ["simpy.*", "lightgbm.*", "shap.*", "sklearn.*", "imageio_ffmpeg.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

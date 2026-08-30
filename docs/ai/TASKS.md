@@ -332,21 +332,18 @@ than only the code.
 | T-143 | Business proposal assembled from the documents | L | T-131 | All six Round 2 elements present |
 | T-144 | Final `DEFINITION_OF_DONE.md` Section 3 pass | M | Everything | Every box |
 
-**Phase 5 status.** T-130 to T-134 and T-136 to T-141 are done: the evaluation runs and
+**Phase 5 status.** T-130 to T-134 and T-136 to T-143 are done: the evaluation runs and
 its numbers are reconciled into the README one by one, the screenshots are captured from
 the running application against the running API rather than staged, the edge cases the
 new modules introduced have tests, and the error messages on every new surface are
 sentences rather than codes.
 
-Three tasks are not done and are named rather than quietly dropped:
+One task is not done and is named rather than quietly dropped:
 
 - **T-135, manual accessibility.** The keyboard paths, the focus trap, the roving
   tabindex and the contrast pairings are implemented and the automated checks pass. A
   screen reader pass and a 3 m legibility check need a person and a room, and neither
   has happened.
-- **T-142, the demo video.** Not recorded.
-- **T-143, the business proposal document.** The material for all six Round 2 elements
-  is in `docs/`, and it has not been assembled into one document.
 
 ---
 
