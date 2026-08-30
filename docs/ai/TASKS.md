@@ -69,8 +69,8 @@ changed the specification rather than only the code:
    defined `u` and `d` as the nearest instrumented stations either side of a dark run,
    then subtracted the cycle times of monitored stations between them. By that
    definition there are none, so the sum was always empty and the bound collapsed to
-   `lo = hi = span_work`: a point value for a dark station, which contradicts rule 3 in
-   CLAUDE.md, STA-04's own wording, and the closing line of the same section, which
+   `lo = hi = span_work`: a point value for a dark station, which contradicts
+   CODING_STANDARDS.md 1.2, STA-04's own wording, and the closing line of the same section, which
    derives a confidence from the interval width. Section 4.3 is rewritten around what
    the evidence actually supports.
 2. **A gate result is not a timing anchor.** An inspection verdict carries the latency of
@@ -377,4 +377,4 @@ Against an 18-day budget with three people working part time. The gap is real an
 
 ---
 
-**Related:** [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) · [AGENT_WORKFLOW.md](AGENT_WORKFLOW.md) · [../quality/ACCEPTANCE_CRITERIA.md](../quality/ACCEPTANCE_CRITERIA.md) · [../product/MVP_SCOPE.md](../product/MVP_SCOPE.md)
+**Related:** [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) · [../quality/ACCEPTANCE_CRITERIA.md](../quality/ACCEPTANCE_CRITERIA.md) · [../product/MVP_SCOPE.md](../product/MVP_SCOPE.md)

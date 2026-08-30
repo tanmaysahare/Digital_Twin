@@ -35,7 +35,6 @@ Kubernetes.
 
 ```
 Digital_Twin/
-  CLAUDE.md
   README.md
   Makefile                   thin, delegates to tools/tasks.py
   make.cmd                   the same tasks on Windows without make

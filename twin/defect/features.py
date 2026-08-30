@@ -341,7 +341,7 @@ def feature_names(builder: FeatureBuilder) -> tuple[str, ...]:
 
     Derived from the line rather than listed, because the per-station features
     depend on how many stations the gate covers, and a hard-coded list would be a
-    plant-specific value in code (CLAUDE.md rule 5).
+    plant-specific value in code (CODING_STANDARDS.md 1.3).
     """
     names: list[str] = []
     for station_id in builder.span:

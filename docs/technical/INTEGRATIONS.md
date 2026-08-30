@@ -258,4 +258,4 @@ someone's phone is the fastest known route to a system nobody trusts.
 
 ---
 
-**Related:** [ARCHITECTURE.md](ARCHITECTURE.md) · [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md) · [TECHNICAL_SPEC.md](TECHNICAL_SPEC.md) · [../../RESEARCH_SOURCES.md](../../RESEARCH_SOURCES.md)
+**Related:** [ARCHITECTURE.md](ARCHITECTURE.md) · [SECURITY_REQUIREMENTS.md](SECURITY_REQUIREMENTS.md) · [TECHNICAL_SPEC.md](TECHNICAL_SPEC.md)

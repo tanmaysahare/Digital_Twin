@@ -173,7 +173,7 @@ class TestProvenanceAtTheWire:
         assert "lo" in required and "hi" in required
 
     def test_an_inferred_estimate_carries_no_point_value(self):
-        """Rule 3 in CLAUDE.md, expressed at the wire rather than in a renderer."""
+        """CODING_STANDARDS.md 1.2, expressed at the wire rather than in a renderer."""
         from twin.api.schemas import EstimateOut
         from twin.domain.estimate import Estimate, Interval
 

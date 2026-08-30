@@ -148,4 +148,4 @@ For plant operations teams running mixed-model assembly lines with uneven sensor
 
 ---
 
-**Related:** [PRODUCT_VISION.md](PRODUCT_VISION.md) · [USER_RESEARCH.md](USER_RESEARCH.md) · [../../RESEARCH_SOURCES.md](../../RESEARCH_SOURCES.md)
+**Related:** [PRODUCT_VISION.md](PRODUCT_VISION.md)

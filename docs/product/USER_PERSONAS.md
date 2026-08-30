@@ -163,4 +163,4 @@ The person who wants a screen with a large green number and no way to check it. 
 
 ---
 
-**Related:** [USER_RESEARCH.md](USER_RESEARCH.md) · [USER_STORIES.md](USER_STORIES.md) · [USER_FLOWS.md](USER_FLOWS.md) · [../design/UX_SPEC.md](../design/UX_SPEC.md)
+**Related:** [USER_STORIES.md](USER_STORIES.md) · [USER_FLOWS.md](USER_FLOWS.md) · [../design/UX_SPEC.md](../design/UX_SPEC.md)

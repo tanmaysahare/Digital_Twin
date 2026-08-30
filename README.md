@@ -3,6 +3,15 @@
 A live, read-only digital twin of a mixed-model vehicle assembly line that runs the next
 two hours before the line does, using only the data the plant already emits.
 
+## Demo video
+
+`submission/demo/aeronomics_digital_twin_ai_demo_video_final.mp4`, 3 minutes 30 seconds,
+narrated. It is committed to this repository and plays in the browser from
+[the file page](https://github.com/tanmaysahare/Digital_Twin/blob/main/submission/demo/aeronomics_digital_twin_ai_demo_video_final.mp4).
+
+Every screen in it is the running application driven against the running API, recorded
+from a live session rather than assembled from stills.
+
 ## The problem it solves
 
 A supervisor finds out that a station has slowed when the line stops. By then the
@@ -35,6 +44,20 @@ showing a spinner.
 `make evaluate` regenerates the evidence pack. `make lint` runs the design rules, ruff,
 mypy strict, eslint and stylelint. `make test` runs the suite. On Windows without `make`,
 use `.\make.cmd <command>`.
+
+## Dependencies
+
+Python 3.11 and Node 20. `make up` needs only Docker and Docker Compose, and installs
+everything else inside the images.
+
+| Layer | What it needs |
+|---|---|
+| Database | TimescaleDB 2.15 on PostgreSQL 16, the only external service |
+| API and models | simpy, numpy, scipy, pandas, pyyaml, pydantic, pydantic-settings, fastapi, uvicorn, sqlalchemy, alembic, psycopg, lightgbm, scikit-learn, shap |
+| Web | next 14, react 18, react-dom, d3-scale. No component library and no icon library, by design |
+| Development, `pip install -e ".[dev]"` | pytest, pytest-asyncio, pytest-cov, hypothesis, ruff, mypy, pip-audit |
+
+Exact versions are pinned in `pyproject.toml` and `web/package.json`.
 
 ## What you will see
 
@@ -202,10 +225,9 @@ the code.
 
 - All data is simulated, and the evaluation evaluates our simulator against our twin.
 - No supervisor, plant manager or controls engineer was interviewed. The personas are
-  composites from published literature, labelled as such in
-  `docs/product/USER_RESEARCH.md`, which also lists the seven things we do not know.
+  composites from published literature and are labelled as such.
 - One of 121 sources was read in full; the rest were surfaced and verified through
-  search. `RESEARCH_SOURCES.md` says which is which.
+  search.
 - Sensor costs are our assumptions rather than quotations, and every Sensor Value Card
   carries the sentence saying so.
 - The modelled business case computes to zero, because the reference line supplies no
@@ -257,13 +279,9 @@ web/            The Next.js application, three views, no component library
 evaluation/     The harness and the generated evidence pack
 tests/          The test suite
 docs/           The specification set. Start at docs/README.md
-docs/submission/  The business proposal and the demo script, assembled for Round 2
+submission/     The narrated demo video
+tools/          The lint, the design rule checks and the accessibility scan
 ```
-
-The Round 2 business proposal, covering problem framing, solution design, target users,
-the business case, the phased roadmap and the risks, is
-`docs/submission/BUSINESS_PROPOSAL.md`. Every number in it is labelled measured, cited or
-assumption, and the measured ones reconcile to `evaluation/metrics.json`.
 
 A test asserts that no station identifier, buffer capacity or threshold from either line
 appears in the source tree. A second line, `config/lines/line7.yaml`, is structurally

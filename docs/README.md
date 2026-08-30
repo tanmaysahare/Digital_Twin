@@ -31,7 +31,6 @@ If you are new to the project, four documents give you the whole picture:
 | [product/USER_STORIES.md](product/USER_STORIES.md) | 55 stories across 10 epics, with priorities |
 | [product/USER_FLOWS.md](product/USER_FLOWS.md) | 10 flows including the ordinary shift and the data-failure path |
 | [product/COMPETITIVE_ANALYSIS.md](product/COMPETITIVE_ANALYSIS.md) | Four market camps, the gap between them, and where we would lose |
-| [product/USER_RESEARCH.md](product/USER_RESEARCH.md) | What the evidence supports, what we do not know, what to study next |
 
 ## UX and design
 
@@ -58,15 +57,13 @@ If you are new to the project, four documents give you the whole picture:
 | [technical/INTEGRATIONS.md](technical/INTEGRATIONS.md) | Adapter by adapter, with firewall rules and the gotchas that decide deployments |
 | [technical/RUNNING.md](technical/RUNNING.md) | How to run the stack, with Docker and without it |
 
-## Building it with Claude Code
+## Building it
 
 | Document | What it covers |
 |---|---|
-| [../CLAUDE.md](../CLAUDE.md) | Project instructions. The compressed version of everything here |
 | [ai/IMPLEMENTATION_PLAN.md](ai/IMPLEMENTATION_PLAN.md) | Six phases, each ending in something demonstrable |
 | [ai/TASKS.md](ai/TASKS.md) | 112 ordered tasks with dependencies and verification |
 | [ai/CODING_STANDARDS.md](ai/CODING_STANDARDS.md) | The rules specific to this project, and the generic ones |
-| [ai/AGENT_WORKFLOW.md](ai/AGENT_WORKFLOW.md) | How to prompt, where an agent will drift, and how it is caught |
 
 ## Quality
 
@@ -88,12 +85,6 @@ Binding. These have veto power over the design documents.
 | [human-design/DESIGN_DONTs.md](human-design/DESIGN_DONTs.md) | The scannable reference. What not to build, why, and what instead |
 | [human-design/UX_WRITING_GUIDELINES.md](human-design/UX_WRITING_GUIDELINES.md) | Every string in the product, with the recurring patterns |
 | [human-design/CONTENT_STYLE_GUIDELINES.md](human-design/CONTENT_STYLE_GUIDELINES.md) | Everything written outside the interface, including the README and the pitch |
-
-## Sources
-
-[../RESEARCH_SOURCES.md](../RESEARCH_SOURCES.md). 121 entries, each marked as read or
-surfaced, with a map from source to design decision and an honest statement of what the
-research does not establish.
 
 ---
 

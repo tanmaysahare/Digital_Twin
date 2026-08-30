@@ -125,4 +125,4 @@ Stated plainly so that scope creep has to argue against something written down.
 
 ---
 
-**Related:** [PRD.md](PRD.md) · [MVP_SCOPE.md](MVP_SCOPE.md) · [COMPETITIVE_ANALYSIS.md](COMPETITIVE_ANALYSIS.md) · [../technical/ARCHITECTURE.md](../technical/ARCHITECTURE.md) · [../../RESEARCH_SOURCES.md](../../RESEARCH_SOURCES.md)
+**Related:** [PRD.md](PRD.md) · [MVP_SCOPE.md](MVP_SCOPE.md) · [COMPETITIVE_ANALYSIS.md](COMPETITIVE_ANALYSIS.md) · [../technical/ARCHITECTURE.md](../technical/ARCHITECTURE.md)

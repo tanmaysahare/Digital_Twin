@@ -155,7 +155,7 @@ def test_the_derived_interval_contains_ground_truth_on_the_reference_line(
 
 
 # ---------------------------------------------------------------------------
-# What the module may never do. Rule 2 and rule 3 in CLAUDE.md.
+# What the module may never do. CODING_STANDARDS.md 1.1 and 1.2.
 
 
 def test_no_dark_station_ever_gets_a_point_value(line2_run: Derived) -> None:

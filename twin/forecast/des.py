@@ -221,7 +221,7 @@ def build_shape(line: LineDefinition) -> LineShape:
     """Unpack a line definition into the arrays the kernel walks.
 
     Plant-specific values stay in configuration; this only rearranges them
-    (CLAUDE.md rule 5).
+    (CODING_STANDARDS.md 1.3).
     """
     capacity_after = {item.after: item.capacity for item in line.buffers}
     slots = [CONVEYOR_SLOTS]

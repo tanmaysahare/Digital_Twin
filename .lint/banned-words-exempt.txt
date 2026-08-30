@@ -8,4 +8,3 @@
 # Format: path, then whitespace, then the reason.
 
 docs/human-design/HUMAN_DESIGN_GUIDELINES.md   Defines the banned list. Rule 21 states the terms in running prose, unquoted.
-RESEARCH_SOURCES.md                            A bibliography. Titles of cited works are reproduced verbatim and must not be edited.

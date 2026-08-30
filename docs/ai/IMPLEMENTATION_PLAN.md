@@ -226,4 +226,4 @@ fixtures before the API exists is a genuine parallelisation rather than a false 
 
 ---
 
-**Related:** [TASKS.md](TASKS.md) · [AGENT_WORKFLOW.md](AGENT_WORKFLOW.md) · [../product/MVP_SCOPE.md](../product/MVP_SCOPE.md) · [../quality/DEFINITION_OF_DONE.md](../quality/DEFINITION_OF_DONE.md)
+**Related:** [TASKS.md](TASKS.md) · [../product/MVP_SCOPE.md](../product/MVP_SCOPE.md) · [../quality/DEFINITION_OF_DONE.md](../quality/DEFINITION_OF_DONE.md)

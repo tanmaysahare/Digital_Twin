@@ -29,7 +29,7 @@ class Step:
 
 @dataclass(frozen=True)
 class Pending:
-    """A command named in CLAUDE.md whose implementation is not written yet."""
+    """A command named in the Makefile whose implementation is not written yet."""
 
     task_id: str
     what: str

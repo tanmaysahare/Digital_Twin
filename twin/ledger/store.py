@@ -65,7 +65,7 @@ def defect_predictor(gate_id: str) -> str:
 
     The gate identifier comes from the line definition, so the predictor names on
     a line are a function of its configuration rather than of anything in code
-    (CLAUDE.md rule 5).
+    (CODING_STANDARDS.md 1.3).
     """
     return f"defect_risk_{gate_id.lower()}"
 

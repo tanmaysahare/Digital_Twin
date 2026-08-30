@@ -2,7 +2,7 @@
 
 **Product:** DigitalTwin.ai
 **Document owner:** Team Aeronomics
-**Audience:** the build agent (Claude Code), the team, and the Round 2 judging panel
+**Audience:** the engineering team and the Round 2 judging panel
 **Last updated:** 2026-08-28
 
 This is the contract for what gets built. MVP_SCOPE.md says what makes it into the Round 2 prototype; this document defines the whole product so that the cut lines are visible.

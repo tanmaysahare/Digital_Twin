@@ -303,7 +303,7 @@ class TestRetroTrace:
 
 class TestVirtualSensorsStillHold:
     def test_every_dark_station_is_named_and_none_is_given_a_point(self, line):
-        """Rule 3 in CLAUDE.md, expressed over the whole line at once."""
+        """CODING_STANDARDS.md 1.2, expressed over the whole line at once."""
         sensors = VirtualSensors(line)
         dark = {station.station_id for station in line.stations if station.tier == "C"}
         covered = {

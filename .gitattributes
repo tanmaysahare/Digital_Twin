@@ -15,6 +15,12 @@ Dockerfile    text eol=lf
 *.cmd         text eol=crlf
 *.bat         text eol=crlf
 
+# Media and packaged formats. text=auto would otherwise guess, and a line ending
+# rewritten inside a video or a deck corrupts the file.
+*.mp4 binary
+*.webm binary
+*.pptx binary
+*.pdf binary
 *.png binary
 *.jpg binary
 *.woff binary

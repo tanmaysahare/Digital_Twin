@@ -7,7 +7,7 @@ by the simulator, and the ground truth they produce goes to a database schema
 the twin's role cannot read (AC-104).
 
 Nothing here is in code, for the same reason nothing in the line definition is
-(CLAUDE.md rule 5). A different line is a different file.
+(CODING_STANDARDS.md 1.3). A different line is a different file.
 """
 
 from __future__ import annotations
