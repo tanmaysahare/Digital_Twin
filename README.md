@@ -244,9 +244,8 @@ the code.
   missing.
 - Fonts are referenced by family with system fallbacks rather than self-hosted, so the
   application runs offline but does not render in Inter unless the machine has it.
-- The screen reader pass and the 3 m legibility check (T-135) have not been done, the
-  demo video (T-142) is not recorded, and the proposal document (T-143) is not assembled.
-  `docs/ai/TASKS.md` names all three.
+- The screen reader pass and the 3 m legibility check (T-135) have not been done. Both
+  need a person and a room. `docs/ai/TASKS.md` names it as outstanding.
 
 ## For a controls engineer
 
